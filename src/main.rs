@@ -1,0 +1,69 @@
+mod mastodon;
+mod services;
+
+use std::collections::HashMap;
+use std::ops::Sub;
+use crate::mastodon::MastodonClient;
+use crate::services::hashtags::hashtags_config;
+use crate::services::timeline::timeline_config;
+use actix_files::{Files, NamedFile};
+use actix_web::middleware::Logger;
+use actix_web::web::Data;
+use actix_web::{get, middleware, App, HttpServer};
+use chrono::{DateTime, Utc};
+use tera::{to_value, try_get_value};
+
+#[get("/")]
+async fn index() -> actix_web::Result<NamedFile> {
+    Ok(NamedFile::open("./static/index.html")?)
+}
+
+
+fn timedelta_filter(value: &tera::Value, _args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
+    let v = try_get_value!("timedelta_filter", "value", String, value);
+    let datetime = DateTime::parse_from_rfc3339(v.as_str()).map_err(|err| tera::Error::from(err.to_string()))?;
+    let delta = Utc::now().with_timezone(datetime.offset()).sub(datetime);
+    if delta.num_days() > 0 {
+        return Ok(to_value(format!("{}d", delta.num_days()))?);
+    }
+    if delta.num_hours() > 0 {
+        return Ok(to_value(format!("{}h", delta.num_hours()))?);
+    }
+    Ok(to_value(format!("{}m", delta.num_minutes()))?)
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init();
+
+    let mut tera = match tera::Tera::new("templates/**/*.html") {
+        Ok(t) => t,
+        Err(e) => {
+            println!("Parsing error(s): {}", e);
+            ::std::process::exit(1);
+        }
+    };
+    tera.register_filter("timedelta", timedelta_filter);
+    let tera_data = Data::new(tera);
+
+    let client = Data::new(MastodonClient::new("https://dice.camp".to_owned()).unwrap());
+
+    let server = HttpServer::new(move || {
+        App::new()
+            .wrap(middleware::Compress::default())
+            .wrap(middleware::NormalizePath::trim())
+            .wrap(Logger::default())
+            .app_data(tera_data.clone())
+            .app_data(client.clone())
+            .configure(hashtags_config)
+            .configure(timeline_config)
+            .service(Files::new("/", "static").index_file("index.html"))
+    })
+    .bind(("127.0.0.1", 1337))?;
+
+    for (addr, scheme) in server.addrs_with_scheme() {
+        println!("Listening on {}://{}", scheme, addr);
+    }
+
+    server.run().await
+}
