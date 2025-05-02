@@ -53,7 +53,7 @@ async fn main() -> std::io::Result<()> {
 
     let client = Data::new(MastodonClient::new("https://dice.camp".to_owned()).unwrap());
 
-    let storage = Data::new(Storage::new().unwrap());
+    let storage = Data::new(Storage::new().await.unwrap());
 
     let server = HttpServer::new(move || {
         App::new()

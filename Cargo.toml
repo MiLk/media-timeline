@@ -13,3 +13,6 @@ megalodon = { version = "1.0.0" }
 serde = { version = "1.0.219", features = ["derive"] }
 tera = { version = "1", default-features = true }
 toml = "0.8.22"
+serde_json = "1.0.140"
+tokio = "1.44.2"
+glob = "0.3.2"

@@ -63,7 +63,7 @@
             </div>
             <div class="hashtag-bar">
                 {% for tag in status.tags %}
-                <a href="{{ tag.url }}">#{{ tag.name }}</a>
+                <a href="{{ tag.url }}" target="_blank" rel="noopener noreferrer">#{{ tag.name }}</a>
                 {% endfor %}
             </div>
             <div class="status__action-bar">

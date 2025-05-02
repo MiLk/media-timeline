@@ -14,17 +14,21 @@ impl MastodonClient {
         let client = Mastodon::new(base_url, None, None)?;
         Ok(MastodonClient { client })
     }
-    pub async fn get_tag_timeline(&self, hashtag: String) -> Result<Vec<entities::Status>, Error> {
-        debug!("Getting tag timeline for {}", hashtag);
+    pub async fn get_tag_timeline(
+        &self,
+        hashtag: &String,
+        min_id: Option<String>,
+    ) -> Result<Vec<entities::Status>, Error> {
+        debug!("Getting tag timeline for {} from {:?}", hashtag, min_id);
         self.client
             .get_tag_timeline(
-                hashtag,
+                hashtag.clone(),
                 Some(&GetHomeTimelineInputOptions {
                     only_media: Some(true),
-                    limit: Some(5),
+                    limit: Some(40),
                     max_id: None,
                     since_id: None,
-                    min_id: None,
+                    min_id,
                     local: None,
                 }),
             )

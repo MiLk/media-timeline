@@ -28,7 +28,7 @@ async fn suggest_tag(
     storage: web::Data<Storage>,
     form: web::Form<SuggestTagFormData>,
 ) -> impl Responder {
-    storage.suggest_hashtag(form.hashtag.as_str());
+    storage.suggest_hashtag(form.hashtag.as_str()).await;
     HttpResponse::Ok()
         .append_header(("HX-Trigger", "tags-updated"))
         .finish()
