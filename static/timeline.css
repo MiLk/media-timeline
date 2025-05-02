@@ -140,16 +140,16 @@
     gap: 6px;
     line-height: 16px;
     margin-top: 16px;
-}
 
-.hashtag-bar a {
-    background: var(--surface-variant-background-color);
-    border-radius: 4px;
-    color: inherit;
-    display: inline-flex;
-    font-weight: 500;
-    padding: 4px 12px;
-    text-decoration: none;
+    a {
+        background: var(--surface-variant-background-color);
+        border-radius: 4px;
+        color: inherit;
+        display: inline-flex;
+        font-weight: 500;
+        padding: 4px 12px;
+        text-decoration: none;
+    }
 }
 
 .status__action-bar {

@@ -1,16 +1,18 @@
 mod mastodon;
 mod services;
+mod storage;
 
-use std::collections::HashMap;
-use std::ops::Sub;
 use crate::mastodon::MastodonClient;
 use crate::services::hashtags::hashtags_config;
 use crate::services::timeline::timeline_config;
+use crate::storage::Storage;
 use actix_files::{Files, NamedFile};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
-use actix_web::{get, middleware, App, HttpServer};
+use actix_web::{App, HttpServer, get, middleware};
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+use std::ops::Sub;
 use tera::{to_value, try_get_value};
 
 #[get("/")]
@@ -18,10 +20,13 @@ async fn index() -> actix_web::Result<NamedFile> {
     Ok(NamedFile::open("./static/index.html")?)
 }
 
-
-fn timedelta_filter(value: &tera::Value, _args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
+fn timedelta_filter(
+    value: &tera::Value,
+    _args: &HashMap<String, tera::Value>,
+) -> tera::Result<tera::Value> {
     let v = try_get_value!("timedelta_filter", "value", String, value);
-    let datetime = DateTime::parse_from_rfc3339(v.as_str()).map_err(|err| tera::Error::from(err.to_string()))?;
+    let datetime = DateTime::parse_from_rfc3339(v.as_str())
+        .map_err(|err| tera::Error::from(err.to_string()))?;
     let delta = Utc::now().with_timezone(datetime.offset()).sub(datetime);
     if delta.num_days() > 0 {
         return Ok(to_value(format!("{}d", delta.num_days()))?);
@@ -48,6 +53,8 @@ async fn main() -> std::io::Result<()> {
 
     let client = Data::new(MastodonClient::new("https://dice.camp".to_owned()).unwrap());
 
+    let storage = Data::new(Storage::new().unwrap());
+
     let server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
@@ -55,6 +62,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(tera_data.clone())
             .app_data(client.clone())
+            .app_data(storage.clone())
             .configure(hashtags_config)
             .configure(timeline_config)
             .service(Files::new("/", "static").index_file("index.html"))

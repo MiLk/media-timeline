@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
           rel="stylesheet">
     <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=at,attribution,code,globe,lock,lock_open,refresh,taunt"/>
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=at,attribution,code,globe,lock,lock_open,recommend,refresh,taunt"/>
     <link rel="stylesheet" href="https://unpkg.com/normalize.css@8.0.1/normalize.css"/>
     <link rel="stylesheet" href="/style.css"/>
     <link rel="stylesheet" href="/index.css"/>
@@ -35,33 +35,41 @@
         </div>
     </div>
     <div class="column">
-        <div>
-
+        <section>
             <button
                     class="button"
                     hx-get="/timeline"
                     hx-trigger="load,click"
                     hx-target="#timeline"
                     hx-disabled-elt="this"
+                    style="width: 100%;"
             >
                 <span class="material-symbols-outlined">refresh</span>
                 Reload timeline
             </button>
-        </div>
-        <div>
-            Active hashtags:
-            <ul id="taglist"></ul>
-            <button
-                    class="button"
-                    hx-get="/tags"
-                    hx-trigger="load,click"
-                    hx-target="#taglist"
-                    hx-swap="outerHTML"
+        </section>
+        <div class="divider"></div>
+        <section
+            hx-get="/tags"
+            hx-trigger="load,tags-updated from:body"
+            hx-target="find .hashtag-bar"
+        >
+            <p>Active hashtags:</p>
+            <div class="hashtag-bar"></div>
+        </section>
+        <div class="divider"></div>
+        <section>
+            <p>Suggest a new hashtag:</P>
+            <form
+                hx-post="/tags"
+                hx-swap="none"
+                hx-on::after-request="if(event.detail.successful) this.reset()"
             >
-                <span class="material-symbols-outlined">refresh</span>
-                Reload tags
-            </button>
-        </div>
+                <input type="text" name="hashtag" />
+                <button type="submit" class="button"><span class="material-symbols-outlined">recommend</span>Suggest</button>
+            </form>
+            <small>Suggestions are reviewed manually, and will not be reflected immediately.</small>
+        </section>
     </div>
 
 </div>

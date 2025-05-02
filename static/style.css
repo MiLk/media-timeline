@@ -113,6 +113,14 @@ body {
     }
 }
 
+input[type="text"] {
+    padding: 6px;
+    color: #9c9cc9;
+    border: 1px solid #9c9cc9;
+    border-radius: 4px;
+    background-color: var(--surface-variant-background-color);
+}
+
 a .material-symbols-outlined {
     font-size: 1.2em;
     width: 1.2em;

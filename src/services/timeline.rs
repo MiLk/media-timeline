@@ -1,6 +1,6 @@
 use crate::mastodon::MastodonClient;
 use actix_web::web::Html;
-use actix_web::{error, get, web, Responder};
+use actix_web::{Responder, error, get, web};
 use megalodon::entities;
 use serde::Serialize;
 use tera::{Context, Tera};

@@ -17,7 +17,7 @@
     flex: 0 1 auto;
     flex-direction: column;
 
-    & a {
+    a {
         text-decoration: none;
     }
 }
@@ -30,13 +30,14 @@
 
     display: flex;
     flex-direction: column;
+    gap: 1em;
 
     position: sticky;
     top: 1em;
 
-    color: #606085;
+    color: #ffffff;
 
-    & a {
+    a {
         color: #606085;
         text-decoration: underline;
 
@@ -44,10 +45,44 @@
             text-decoration: none;
         }
     }
+
+    .divider {
+        width: 100%;
+        border-bottom: 1px solid var(--background-border-color);
+    }
+
+    section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+
+        font-size: 0.875em;
+
+        ul {
+            margin-left: 0.5rem;
+        }
+
+        .hashtag-bar {
+            margin: 0;
+        }
+
+        form {
+            display: flex;
+            flex-direction: row;
+            gap: 0.25rem;
+            margin: 0;
+        }
+
+        small {
+            color: #606085;
+        }
+    }
 }
 
 #intro {
     line-height: 130%;
+
+    color: #606085;
 
     strong {
         font-weight: 500;

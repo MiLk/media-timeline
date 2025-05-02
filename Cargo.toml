@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+actix-files = "0.6.6"
 actix-web = "4"
-megalodon = { version = "1.0.0" }
-tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros"] }
+chrono = "0.4"
 env_logger = "0.8"
 log = "0.4"
-actix-files = "0.6.6"
-tera = { version = "1", default-features = true }
+megalodon = { version = "1.0.0" }
 serde = { version = "1.0.219", features = ["derive"] }
-chrono = "0.4"
+tera = { version = "1", default-features = true }
+toml = "0.8.22"

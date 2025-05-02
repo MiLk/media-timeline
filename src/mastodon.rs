@@ -2,7 +2,7 @@ use log::debug;
 use megalodon::error::Error;
 use megalodon::mastodon::Mastodon;
 use megalodon::megalodon::GetHomeTimelineInputOptions;
-use megalodon::{entities, Megalodon};
+use megalodon::{Megalodon, entities};
 
 #[derive(Debug, Clone)]
 pub struct MastodonClient {
