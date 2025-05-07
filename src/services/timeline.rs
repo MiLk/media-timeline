@@ -37,10 +37,11 @@ async fn paginate_timeline(
                 if page.is_empty() {
                     break;
                 }
-                match statuses.last() {
+                match page.last() {
                     None => break, // Should already be covered by checking if the page is empty
                     Some(status) => last_id = status.id.clone(),
                 }
+                debug!("Retrieved {} new statuses for {} - last: {}", page.len(), hashtag, last_id);
                 storage.set_recent_status_id(hashtag.clone(), last_id.clone());
                 statuses.extend(page)
             }
