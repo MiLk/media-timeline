@@ -23,7 +23,7 @@ async fn paginate_timeline(
         None => {
             let statuses = mastodon_client.get_tag_timeline(&hashtag, None).await?;
             if let Some(status) = statuses.last() {
-                storage.set_recent_status_id(hashtag.clone(), status.id.clone());
+                storage.set_recent_status_id(&hashtag, &status.id);
             }
             Ok(statuses)
         }
@@ -37,12 +37,20 @@ async fn paginate_timeline(
                 if page.is_empty() {
                     break;
                 }
-                match page.last() {
+                match page
+                    .iter()
+                    .max_by_key(|&status| (status.id.len(), &status.id))
+                {
                     None => break, // Should already be covered by checking if the page is empty
-                    Some(status) => last_id = status.id.clone(),
+                    Some(highest_id) => last_id = highest_id.id.clone(),
                 }
-                debug!("Retrieved {} new statuses for {} - last: {}", page.len(), hashtag, last_id);
-                storage.set_recent_status_id(hashtag.clone(), last_id.clone());
+                debug!(
+                    "Retrieved {} new statuses for {} - last: {}",
+                    page.len(),
+                    hashtag,
+                    last_id
+                );
+                storage.set_recent_status_id(&hashtag, &last_id);
                 statuses.extend(page)
             }
             statuses.sort_by_key(|status| Reverse((status.id.len(), status.id.clone())));

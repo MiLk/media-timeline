@@ -106,8 +106,11 @@ impl Storage {
             .map(|s| s.clone())
     }
 
-    pub fn set_recent_status_id(&self, key: String, value: String) -> Option<String> {
-        self.recent_status_ids.lock().unwrap().insert(key, value)
+    pub fn set_recent_status_id(&self, key: &String, value: &String) -> Option<String> {
+        self.recent_status_ids
+            .lock()
+            .unwrap()
+            .insert(key.clone(), value.clone())
     }
 
     pub async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), Box<dyn Error>> {
