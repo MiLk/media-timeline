@@ -11,6 +11,7 @@ use actix_web::middleware::Logger;
 use actix_web::web::Data;
 use actix_web::{App, HttpServer, get, middleware};
 use chrono::{DateTime, Utc};
+use log::debug;
 use std::collections::HashMap;
 use std::ops::Sub;
 use tera::{to_value, try_get_value};
@@ -37,6 +38,9 @@ fn timedelta_filter(
     Ok(to_value(format!("{}m", delta.num_minutes()))?)
 }
 
+const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
@@ -51,7 +55,10 @@ async fn main() -> std::io::Result<()> {
     tera.register_filter("timedelta", timedelta_filter);
     let tera_data = Data::new(tera);
 
-    let client = Data::new(MastodonClient::new("https://dice.camp".to_owned()).unwrap());
+    let user_agent = Some(String::from(format!("{}/{}", PKG_NAME, PKG_VERSION)));
+    debug!("Using the following User-Agent: {:?}", user_agent);
+    let client =
+        Data::new(MastodonClient::new("https://dice.camp".to_owned(), user_agent).unwrap());
 
     let storage = Data::new(Storage::new().await.unwrap());
 

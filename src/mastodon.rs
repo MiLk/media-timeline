@@ -10,8 +10,8 @@ pub struct MastodonClient {
 }
 
 impl MastodonClient {
-    pub fn new(base_url: String) -> Result<MastodonClient, Error> {
-        let client = Mastodon::new(base_url, None, None)?;
+    pub fn new(base_url: String, user_agent: Option<String>) -> Result<MastodonClient, Error> {
+        let client = Mastodon::new(base_url, None, user_agent)?;
         Ok(MastodonClient { client })
     }
     pub async fn get_tag_timeline(
