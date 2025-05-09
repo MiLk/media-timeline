@@ -1,11 +1,12 @@
 [package]
-name = "media-timelime"
+name = "media-timeline"
 version = "0.1.0"
 edition = "2024"
 description = "Media timeline for the fediverse"
 readme = "README.md"
 repository = "https://github.com/MiLk/media-timeline"
 license = "MIT"
+publish = false
 
 [dependencies]
 actix-files = "0.6.6"

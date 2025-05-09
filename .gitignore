@@ -1,3 +1,4 @@
 /target
 /data/*.toml
 /data/statuses/*/*/*.json
+/dist

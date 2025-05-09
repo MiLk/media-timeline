@@ -9,10 +9,11 @@ use crate::storage::Storage;
 use actix_files::{Files, NamedFile};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
-use actix_web::{App, HttpServer, get, middleware};
+use actix_web::{get, middleware, App, HttpServer};
 use chrono::{DateTime, Utc};
 use log::debug;
 use std::collections::HashMap;
+use std::env;
 use std::ops::Sub;
 use tera::{to_value, try_get_value};
 
@@ -62,6 +63,7 @@ async fn main() -> std::io::Result<()> {
 
     let storage = Data::new(Storage::new().await.unwrap());
 
+    let listen_addr = env::var("LISTEN_ADDR").unwrap_or("127.0.0.1".to_owned());
     let server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
@@ -74,7 +76,7 @@ async fn main() -> std::io::Result<()> {
             .configure(timeline_config)
             .service(Files::new("/", "static").index_file("index.html"))
     })
-    .bind(("127.0.0.1", 1337))?;
+    .bind((listen_addr, 1337))?;
 
     for (addr, scheme) in server.addrs_with_scheme() {
         println!("Listening on {}://{}", scheme, addr);
