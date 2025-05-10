@@ -11,7 +11,10 @@ This is not a replacement client for the fediverse.
 ### Requirements
 
 ```sh
+# For macos
 make setup/macos
+# For fedora
+make setup/fedora
 ```
 
 ### Build
