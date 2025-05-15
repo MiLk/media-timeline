@@ -9,7 +9,7 @@ use crate::storage::Storage;
 use actix_files::{Files, NamedFile};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
-use actix_web::{get, middleware, App, HttpServer};
+use actix_web::{App, HttpServer, get, middleware};
 use chrono::{DateTime, Utc};
 use log::debug;
 use std::collections::HashMap;
