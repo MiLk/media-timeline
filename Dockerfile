@@ -94,8 +94,8 @@ WORKDIR /app
 
 COPY --from=rust-build /output/bin/${APPLICATION_NAME} /app/entrypoint
 
-COPY static  /opt/myapp/static
-COPY templates  /opt/myapp/templates
+COPY static  /app/static
+COPY templates  /app/templates
 
 ENV RUST_BACKTRACE=full
 ENTRYPOINT ["/app/entrypoint"]
