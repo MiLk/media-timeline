@@ -13,6 +13,9 @@ build/aarch64-linux:
 	@gzip --force dist/build.tar
 
 
+build/docker:
+	 docker buildx build --platform linux/amd64,linux/arm64 --build-arg APPLICATION_NAME=media-timeline -t media-timeline .
+
 setup/macos:
 	brew tap messense/macos-cross-toolchains
 	brew install aarch64-unknown-linux-gnu
