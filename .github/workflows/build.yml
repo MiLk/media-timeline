@@ -23,12 +23,6 @@ env:
     IMAGE_NAME: ${{ github.repository }}
     RUSTFLAGS: --deny=warnings
 
-concurrency:
-    # each new commit to a PR runs this workflow
-    # so we need to avoid a long running older one from overwriting the "pr-<number>-latest"
-    group: "${{ github.workflow }} @ ${{ github.ref_name }}"
-    cancel-in-progress: true
-
 jobs:
     cargo-build:
         name: Cargo build
@@ -180,7 +174,7 @@ jobs:
                   tags: |
                       type=raw,value=${{ env.UNIQUE_TAG }}
                   labels: |
-                      org.opencontainers.image.version=pr-${{ github.event.number }}
+                      org.opencontainers.image.version=${{ github.event.after }}
                       org.opencontainers.image.source=${{ github.event.pull_request.html_url }}
 
             - name: Log into registry ${{ env.REGISTRY }}
@@ -260,7 +254,7 @@ jobs:
             - name: Set Docker tag (which is also the filename.tar)
               shell: bash
               run: |
-                  UNIQUE_TAG=pr-${{ github.event.pull_request.base.sha }}-${{ github.event.pull_request.head.sha }}
+                  UNIQUE_TAG=${{ github.event.after }}
                   echo "UNIQUE_TAG=${UNIQUE_TAG##*/}" >> ${GITHUB_ENV}
 
             - name: Extract Docker metadata
