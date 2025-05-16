@@ -14,7 +14,11 @@ build/aarch64-linux:
 
 
 build/docker:
-	 docker buildx build --platform linux/amd64,linux/arm64 --build-arg APPLICATION_NAME=media-timeline -t media-timeline .
+	docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		--load \
+		--build-arg APPLICATION_NAME=media-timeline \
+		-t ghcr.io/milk/media-timeline:development .
 
 setup/macos:
 	brew tap messense/macos-cross-toolchains

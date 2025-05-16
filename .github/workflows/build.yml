@@ -282,8 +282,12 @@ jobs:
               shell: bash
               run: |
                   base_tag=$(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:%s ' ${{ env.UNIQUE_TAG }})
+                  latest_tag=$(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:%s ' latest)
 
                   docker push ${base_tag}
+
+                  docker tag ${base_tag} ${latest_tag}
+                  docker push ${latest_tag}
 
             - name: Set new tags on pushed image
               shell: bash

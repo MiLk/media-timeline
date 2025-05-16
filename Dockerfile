@@ -92,10 +92,12 @@ USER appuser
 
 WORKDIR /app
 
-COPY --from=rust-build /output/bin/${APPLICATION_NAME} /app/entrypoint
+COPY --from=rust-build --chown=appuser:appuser /output/bin/${APPLICATION_NAME} /app/entrypoint
+COPY --chown=appuser:appuser static  /app/static
+COPY --chown=appuser:appuser templates  /app/templates
 
-COPY static  /app/static
-COPY templates  /app/templates
+VOLUME /app/data
+EXPOSE 1337
 
 ENV RUST_BACKTRACE=full
 ENTRYPOINT ["/app/entrypoint"]
