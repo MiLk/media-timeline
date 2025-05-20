@@ -1,5 +1,3 @@
-#![feature(iterator_try_collect)]
-
 mod mastodon;
 mod services;
 mod storage;

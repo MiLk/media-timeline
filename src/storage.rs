@@ -4,8 +4,8 @@ use log::debug;
 use megalodon::entities::Status;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::params;
 use rusqlite::types::ToSql;
+use rusqlite::{Row, params};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -41,7 +41,7 @@ struct DbWrapper(Pool<SqliteConnectionManager>);
 impl DbWrapper {
     fn new() -> Result<Self, Box<dyn Error>> {
         let manager = SqliteConnectionManager::file("data/db.sqlite3");
-        let pool = r2d2::Pool::new(manager).expect("unable to create db pool");
+        let pool = Pool::new(manager).expect("unable to create db pool");
         Self::create_sqlite_tables(&pool)?;
         Ok(Self(pool))
     }
@@ -104,13 +104,18 @@ impl DbWrapper {
             ORDER BY 2 DESC
             LIMIT ?2;",
         )?;
-        let results = stmt
+
+        fn read_row(row: &Row) -> rusqlite::Result<(String, u32)> {
+            Ok((row.get(0)?, row.get(1)?))
+        }
+
+        let results: Result<Vec<(String, u32)>, _> = stmt
             .query_map(
                 params![format!("-{} days", &duration_days), &limit],
-                |row| Ok((row.get(0)?, row.get(1)?)),
+                read_row,
             )?
-            .try_collect()?;
-        Ok(results)
+            .collect();
+        Ok(results?)
     }
 }
 
@@ -306,6 +311,6 @@ impl Storage {
         periods
             .iter()
             .map(|&period| Ok((period, self.db.popular_tags(&period, &limit)?)))
-            .try_collect()
+            .collect()
     }
 }
