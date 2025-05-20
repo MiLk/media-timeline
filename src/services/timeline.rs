@@ -101,7 +101,7 @@ async fn get_timeline(
 
     let known_ids: HashSet<String> = statuses.iter().map(|s| s.id.clone()).collect();
 
-    for status in storage.retrieve_statuses(&hashtags).await? {
+    for status in storage.retrieve_statuses(Some(&hashtags)).await? {
         if known_ids.contains(status.id.as_str()) {
             continue;
         }

@@ -1,3 +1,5 @@
+#![feature(iterator_try_collect)]
+
 mod mastodon;
 mod services;
 mod storage;
@@ -14,6 +16,7 @@ use chrono::{DateTime, Utc};
 use log::debug;
 use std::collections::HashMap;
 use std::env;
+use std::error::Error;
 use std::ops::Sub;
 use tera::{to_value, try_get_value};
 
@@ -43,7 +46,7 @@ const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     let mut tera = match tera::Tera::new("templates/**/*.html") {
@@ -62,6 +65,7 @@ async fn main() -> std::io::Result<()> {
         Data::new(MastodonClient::new("https://dice.camp".to_owned(), user_agent).unwrap());
 
     let storage = Data::new(Storage::new().await.unwrap());
+    storage.rebuild_index_statuses().await?;
 
     let listen_addr = env::var("LISTEN_ADDR").unwrap_or("127.0.0.1".to_owned());
     let server = HttpServer::new(move || {
@@ -82,5 +86,6 @@ async fn main() -> std::io::Result<()> {
         println!("Listening on {}://{}", scheme, addr);
     }
 
-    server.run().await
+    server.run().await?;
+    Ok(())
 }

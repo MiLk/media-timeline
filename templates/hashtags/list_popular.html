@@ -1,0 +1,12 @@
+{% for period, group in hashtags %}
+<div>
+    <p>
+    Popular tags in the past {{ period }} days:
+    </p>
+    <div class="hashtag-bar">
+        {% for hashtag in group %}
+        <a href="https://dice.camp/tags/{{ hashtag.0 }}" target="_blank" rel="noreferrer noopener">#{{ hashtag.0 }} ({{ hashtag.1 }})</a>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
