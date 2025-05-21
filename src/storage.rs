@@ -42,6 +42,13 @@ impl DbWrapper {
     fn new() -> Result<Self, Box<dyn Error>> {
         let manager = SqliteConnectionManager::file("data/db.sqlite3");
         let pool = Pool::new(manager).expect("unable to create db pool");
+
+        {
+            let conn = pool.get()?;
+            conn.pragma_update(None, "synchronous", "NORMAL")?;
+            conn.pragma_update(None, "journal_mode", "MEMORY")?;
+        }
+
         Self::create_sqlite_tables(&pool)?;
         Ok(Self(pool))
     }
@@ -68,24 +75,28 @@ impl DbWrapper {
         &self,
         statuses: impl IntoIterator<Item = &'a Status>,
     ) -> Result<(), Box<dyn Error>> {
-        let conn = self.0.get()?;
-        let mut stmt = conn.prepare_cached("INSERT OR REPLACE INTO statuses (id, created_at, account_id, account_acct) VALUES (?1, ?2, ?3, ?4)")?;
-        let mut tag_stmt = conn.prepare_cached(
-            "INSERT OR REPLACE INTO status_tags (status_id, name) VALUES (?1, ?2)",
-        )?;
-        for status in statuses {
-            let created_at = ToSql::to_sql(&status.created_at)?;
-            stmt.execute(params![
-                &status.id,
-                &created_at,
-                &status.account.id,
-                &status.account.acct
-            ])?;
+        let mut conn = self.0.get()?;
+        let tx = conn.transaction()?;
+        {
+            let mut stmt = tx.prepare_cached("INSERT OR REPLACE INTO statuses (id, created_at, account_id, account_acct) VALUES (?1, ?2, ?3, ?4)")?;
+            let mut tag_stmt = tx.prepare_cached(
+                "INSERT OR REPLACE INTO status_tags (status_id, name) VALUES (?1, ?2)",
+            )?;
+            for status in statuses {
+                let created_at = ToSql::to_sql(&status.created_at)?;
+                stmt.execute(params![
+                    &status.id,
+                    &created_at,
+                    &status.account.id,
+                    &status.account.acct
+                ])?;
 
-            for tag in &status.tags {
-                tag_stmt.execute(params![&status.id, &tag.name])?;
+                for tag in &status.tags {
+                    tag_stmt.execute(params![&status.id, &tag.name])?;
+                }
             }
         }
+        tx.commit()?;
         Ok(())
     }
 
