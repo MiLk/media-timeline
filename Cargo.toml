@@ -21,6 +21,6 @@ toml = "0.8"
 serde_json = "1.0"
 tokio = "1.45"
 glob = "0.3"
-rusqlite = { version = "0.35", features = ["chrono"] }
+rusqlite = { version = "0.35", features = ["bundled", "chrono"] }
 r2d2_sqlite = "0.28"
 r2d2 = "0.8"

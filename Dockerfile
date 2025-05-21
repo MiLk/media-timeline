@@ -11,11 +11,10 @@ RUN --mount=type=cache,id=apt-cache-amd64,target=/var/cache/apt,sharing=locked \
     apt-get update \
     && apt-get --no-install-recommends install --yes \
         build-essential \
-        musl-dev \
-        musl-tools
+        libsqlite3-dev
 
 FROM rust-base AS rust-linux-amd64
-ARG TARGET=x86_64-unknown-linux-musl
+ARG TARGET=x86_64-unknown-linux-gnu
 
 
 RUN --mount=type=cache,id=apt-cache-amd64,from=rust-base,source=/var/cache/apt,target=/var/cache/apt,sharing=locked \
@@ -28,7 +27,7 @@ RUN --mount=type=cache,id=apt-cache-amd64,from=rust-base,source=/var/cache/apt,t
 
 
 FROM rust-base AS rust-linux-arm64
-ARG TARGET=aarch64-unknown-linux-musl
+ARG TARGET=aarch64-unknown-linux-gnu
 
 RUN --mount=type=cache,id=apt-cache-arm64,from=rust-base,source=/var/cache/apt,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=apt-lib-arm64,from=rust-base,source=/var/lib/apt,target=/var/lib/apt,sharing=locked \
@@ -81,7 +80,7 @@ RUN addgroup --gid 900 appgroup \
 RUN cat /etc/group | grep appuser > /tmp/group_appuser
 RUN cat /etc/passwd | grep appuser > /tmp/passwd_appuser
 
-FROM scratch
+FROM gcr.io/distroless/cc-debian12
 
 ARG APPLICATION_NAME
 
