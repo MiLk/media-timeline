@@ -6,6 +6,7 @@ use crate::mastodon::MastodonClient;
 use crate::services::hashtags::hashtags_config;
 use crate::services::timeline::timeline_config;
 use crate::storage::Storage;
+use crate::storage::sqlite::SqliteDal;
 use actix_files::{Files, NamedFile};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
@@ -62,7 +63,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client =
         Data::new(MastodonClient::new("https://dice.camp".to_owned(), user_agent).unwrap());
 
-    let storage = Data::new(Storage::new().await.unwrap());
+    let storage = Data::new(Storage::new(SqliteDal::new()?).await?);
     storage.rebuild_index_statuses().await?;
 
     let listen_addr = env::var("LISTEN_ADDR").unwrap_or("127.0.0.1".to_owned());

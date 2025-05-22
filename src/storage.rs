@@ -1,16 +1,17 @@
+pub mod sqlite;
+pub mod traits;
+
+use crate::storage::traits::{DataAccessLayer, StatusesIndexer};
+use actix_web::web;
 use chrono::{DateTime, Utc};
 use glob::glob;
 use log::debug;
 use megalodon::entities::Status;
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::types::ToSql;
-use rusqlite::{Row, params};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs::exists;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tokio::fs::{File, create_dir_all};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -34,101 +35,6 @@ impl HashtagAttributes {
 }
 
 type HashtagTable = HashMap<HashtagKey, HashtagAttributes>;
-
-#[derive(Clone)]
-struct DbWrapper(Pool<SqliteConnectionManager>);
-
-impl DbWrapper {
-    fn new() -> Result<Self, Box<dyn Error>> {
-        let manager = SqliteConnectionManager::file("data/db.sqlite3");
-        let pool = Pool::new(manager).expect("unable to create db pool");
-
-        {
-            let conn = pool.get()?;
-            conn.pragma_update(None, "synchronous", "NORMAL")?;
-            conn.pragma_update(None, "journal_mode", "MEMORY")?;
-        }
-
-        Self::create_sqlite_tables(&pool)?;
-        Ok(Self(pool))
-    }
-
-    fn create_sqlite_tables(pool: &Pool<SqliteConnectionManager>) -> Result<(), Box<dyn Error>> {
-        let conn = pool.get()?;
-        conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS statuses (
-                id   TEXT NOT NULL PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                account_id TEXT NOT NULL,
-                account_acct TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS status_tags (
-                status_id   TEXT NOT NULL,
-                name   TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS status_tags_idx ON status_tags (status_id, name);",
-        )?;
-        Ok(())
-    }
-
-    pub fn insert_statuses<'a>(
-        &self,
-        statuses: impl IntoIterator<Item = &'a Status>,
-    ) -> Result<(), Box<dyn Error>> {
-        let mut conn = self.0.get()?;
-        let tx = conn.transaction()?;
-        {
-            let mut stmt = tx.prepare_cached("INSERT OR REPLACE INTO statuses (id, created_at, account_id, account_acct) VALUES (?1, ?2, ?3, ?4)")?;
-            let mut tag_stmt = tx.prepare_cached(
-                "INSERT OR REPLACE INTO status_tags (status_id, name) VALUES (?1, ?2)",
-            )?;
-            for status in statuses {
-                let created_at = ToSql::to_sql(&status.created_at)?;
-                stmt.execute(params![
-                    &status.id,
-                    &created_at,
-                    &status.account.id,
-                    &status.account.acct
-                ])?;
-
-                for tag in &status.tags {
-                    tag_stmt.execute(params![&status.id, &tag.name])?;
-                }
-            }
-        }
-        tx.commit()?;
-        Ok(())
-    }
-
-    pub fn popular_tags(
-        &self,
-        duration_days: &u16,
-        limit: &u16,
-    ) -> Result<Vec<(String, u32)>, Box<dyn Error>> {
-        let conn = self.0.get()?;
-        let mut stmt = conn.prepare_cached(
-            "SELECT name, COUNT(*)
-            FROM status_tags st
-            LEFT JOIN statuses s ON st.status_id = s.id
-            WHERE s.created_at >= datetime('now', ?1)
-            GROUP BY name
-            ORDER BY 2 DESC
-            LIMIT ?2;",
-        )?;
-
-        fn read_row(row: &Row) -> rusqlite::Result<(String, u32)> {
-            Ok((row.get(0)?, row.get(1)?))
-        }
-
-        let results: Result<Vec<(String, u32)>, _> = stmt
-            .query_map(
-                params![format!("-{} days", &duration_days), &limit],
-                read_row,
-            )?
-            .collect();
-        Ok(results?)
-    }
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct StorageData {
@@ -154,12 +60,12 @@ impl StorageData {
 }
 
 pub struct Storage {
-    db: DbWrapper,
+    dal: Arc<dyn DataAccessLayer>,
     data: StorageData,
 }
 
 impl Storage {
-    pub async fn new() -> Result<Self, Box<dyn Error>> {
+    pub async fn new<T: DataAccessLayer>(dal: T) -> Result<Self, Box<dyn Error>> {
         let data = if exists("data/storage.toml")? {
             StorageData::from_disk().await?
         } else {
@@ -167,12 +73,12 @@ impl Storage {
         };
 
         Ok(Storage {
-            db: DbWrapper::new()?,
+            dal: Arc::new(dal),
             data,
         })
     }
 
-    pub async fn persist(&self) -> Result<(), Box<dyn Error>> {
+    async fn persist(&self) -> Result<(), Box<dyn Error>> {
         let str = toml::to_string(&self.data)?;
         let mut file = File::create("data/storage.toml").await?;
         file.write_all(str.as_bytes()).await?;
@@ -234,7 +140,7 @@ impl Storage {
     }
 
     pub async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), Box<dyn Error>> {
-        async fn write_status(status: Status, db: DbWrapper) -> () {
+        async fn write_status(status: Status, db: Arc<dyn StatusesIndexer + Sync + Send>) -> () {
             let status_id = status.id.clone();
             let len = status_id.len();
             let dir1 = if len <= 18 {
@@ -263,13 +169,13 @@ impl Storage {
             .await
             .expect(format!("failed to write to file {}", &filepath).as_str());
 
-            db.insert_statuses(std::iter::once(&status))
+            db.insert_statuses(vec![&status])
                 .expect(format!("failed to insert status {}", &status_id).as_str());
         }
 
         let mut tasks = Vec::with_capacity(statuses.len());
         for status in statuses.iter() {
-            tasks.push(tokio::spawn(write_status(status.clone(), self.db.clone())))
+            tasks.push(tokio::spawn(write_status(status.clone(), self.dal.clone())))
         }
         for task in tasks {
             task.await?;
@@ -306,14 +212,6 @@ impl Storage {
         Ok(statuses)
     }
 
-    pub async fn rebuild_index_statuses(&self) -> Result<(), Box<dyn Error>> {
-        debug!("Rebuilding index statuses");
-
-        let statuses = self.retrieve_statuses(None).await?;
-        self.db.insert_statuses(statuses.iter())?;
-        Ok(())
-    }
-
     pub fn popular_tags(
         &self,
         periods: Vec<u16>,
@@ -321,7 +219,20 @@ impl Storage {
     ) -> Result<HashMap<u16, Vec<(String, u32)>>, Box<dyn Error>> {
         periods
             .iter()
-            .map(|&period| Ok((period, self.db.popular_tags(&period, &limit)?)))
+            .map(|&period| Ok((period, self.dal.popular_tags(&period, &limit)?)))
             .collect()
+    }
+
+    pub async fn rebuild_index_statuses(&self) -> Result<(), Box<dyn Error>> {
+        debug!("Rebuilding index statuses");
+        let statuses = self.retrieve_statuses(None).await?;
+
+        let dbal = self.dal.clone();
+        web::block(move || {
+            dbal.insert_statuses(statuses.iter().collect())
+                .expect("unable to rebuild the index for statuses")
+        })
+        .await?;
+        Ok(())
     }
 }
