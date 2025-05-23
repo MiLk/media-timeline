@@ -72,10 +72,13 @@ impl Storage {
             StorageData::new()
         };
 
-        Ok(Storage {
+        let storage = Self {
             dal: Arc::new(dal),
             data,
-        })
+        };
+        storage.rebuild_index_statuses().await?;
+
+        Ok(storage)
     }
 
     async fn persist(&self) -> Result<(), Box<dyn Error>> {
@@ -223,7 +226,7 @@ impl Storage {
             .collect()
     }
 
-    pub async fn rebuild_index_statuses(&self) -> Result<(), Box<dyn Error>> {
+    async fn rebuild_index_statuses(&self) -> Result<(), Box<dyn Error>> {
         debug!("Rebuilding index statuses");
         let statuses = self.retrieve_statuses(None).await?;
 

@@ -11,6 +11,7 @@ pub struct MastodonClient {
 
 impl MastodonClient {
     pub fn new(base_url: String, user_agent: Option<String>) -> Result<MastodonClient, Error> {
+        debug!("Using the following User-Agent: {:?}", user_agent);
         let client = Mastodon::new(base_url, None, user_agent)?;
         Ok(MastodonClient { client })
     }
