@@ -1,7 +1,10 @@
 pub mod sqlite;
 pub mod traits;
 
-use crate::storage::traits::{DataAccessLayer, StatusesIndexer};
+use crate::storage::traits::{
+    DataAccessLayer, RecentStatusesService, StatusesIndexer, StatusesService,
+    SubscribedHashtagsService,
+};
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use glob::glob;
@@ -81,68 +84,31 @@ impl Storage {
         Ok(storage)
     }
 
+    /// Rebuild indexes in case it's not up to date
+    /// This will read all the cached posts on the disk to rebuild the index database
+    async fn rebuild_index_statuses(&self) -> Result<(), Box<dyn Error>> {
+        debug!("Rebuilding index statuses");
+        let statuses = self.retrieve_statuses(None).await?;
+
+        let dal = self.dal.clone();
+        web::block(move || {
+            dal.insert_statuses(statuses.iter().collect())
+                .expect("unable to rebuild the index for statuses")
+        })
+        .await?;
+        Ok(())
+    }
+
     async fn persist(&self) -> Result<(), Box<dyn Error>> {
         let str = toml::to_string(&self.data)?;
         let mut file = File::create("data/storage.toml").await?;
         file.write_all(str.as_bytes()).await?;
         Ok(())
     }
+}
 
-    pub fn list_hashtags(&self) -> Vec<HashtagKey> {
-        let data = self.data.hashtags.lock().unwrap();
-        let mut list: Vec<HashtagKey> = data
-            .iter()
-            .filter_map(|(key, attrs)| match attrs.approved {
-                true => Some(key.clone()),
-                false => None,
-            })
-            .collect();
-        list.sort();
-        list
-    }
-
-    pub async fn suggest_hashtag(&self, key: &str) -> () {
-        if key.is_empty() {
-            return;
-        }
-
-        {
-            let mut data = self.data.hashtags.lock().unwrap();
-            match data.get_mut(key) {
-                Some(value) => {
-                    value.votes += 1;
-                    debug!(
-                        "Suggested hashtag received a new vote: {} => {}",
-                        key, value.votes
-                    );
-                }
-                None => {
-                    debug!("New hashtag suggested: {}", key);
-                    data.insert(String::from(key), HashtagAttributes::new_suggestion());
-                }
-            }
-        }
-        self.persist().await.unwrap()
-    }
-
-    pub fn get_recent_status_id(&self, key: &str) -> Option<String> {
-        self.data
-            .recent_status_ids
-            .lock()
-            .unwrap()
-            .get(key)
-            .map(|s| s.clone())
-    }
-
-    pub fn set_recent_status_id(&self, key: &String, value: &String) -> Option<String> {
-        self.data
-            .recent_status_ids
-            .lock()
-            .unwrap()
-            .insert(key.clone(), value.clone())
-    }
-
-    pub async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), Box<dyn Error>> {
+impl StatusesService for Storage {
+    async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), Box<dyn Error>> {
         async fn write_status(status: Status, db: Arc<dyn StatusesIndexer + Sync + Send>) -> () {
             let status_id = status.id.clone();
             let len = status_id.len();
@@ -188,7 +154,7 @@ impl Storage {
         Ok(())
     }
 
-    pub async fn retrieve_statuses(
+    async fn retrieve_statuses(
         &self,
         hashtags: Option<&Vec<String>>,
     ) -> Result<Vec<Status>, Box<dyn Error>> {
@@ -215,7 +181,7 @@ impl Storage {
         Ok(statuses)
     }
 
-    pub fn popular_tags(
+    fn popular_tags(
         &self,
         periods: Vec<u16>,
         limit: u16,
@@ -225,17 +191,62 @@ impl Storage {
             .map(|&period| Ok((period, self.dal.popular_tags(&period, &limit)?)))
             .collect()
     }
+}
 
-    async fn rebuild_index_statuses(&self) -> Result<(), Box<dyn Error>> {
-        debug!("Rebuilding index statuses");
-        let statuses = self.retrieve_statuses(None).await?;
+impl RecentStatusesService for Storage {
+    fn get_recent_status_id(&self, key: &str) -> Option<String> {
+        self.data
+            .recent_status_ids
+            .lock()
+            .unwrap()
+            .get(key)
+            .map(|s| s.clone())
+    }
 
-        let dbal = self.dal.clone();
-        web::block(move || {
-            dbal.insert_statuses(statuses.iter().collect())
-                .expect("unable to rebuild the index for statuses")
-        })
-        .await?;
-        Ok(())
+    fn set_recent_status_id(&self, key: &String, value: &String) -> Option<String> {
+        self.data
+            .recent_status_ids
+            .lock()
+            .unwrap()
+            .insert(key.clone(), value.clone())
+    }
+}
+
+impl SubscribedHashtagsService for Storage {
+    fn list_hashtags(&self) -> Vec<HashtagKey> {
+        let data = self.data.hashtags.lock().unwrap();
+        let mut list: Vec<HashtagKey> = data
+            .iter()
+            .filter_map(|(key, attrs)| match attrs.approved {
+                true => Some(key.clone()),
+                false => None,
+            })
+            .collect();
+        list.sort();
+        list
+    }
+
+    async fn suggest_hashtag(&self, key: &str) -> () {
+        if key.is_empty() {
+            return;
+        }
+
+        {
+            let mut data = self.data.hashtags.lock().unwrap();
+            match data.get_mut(key) {
+                Some(value) => {
+                    value.votes += 1;
+                    debug!(
+                        "Suggested hashtag received a new vote: {} => {}",
+                        key, value.votes
+                    );
+                }
+                None => {
+                    debug!("New hashtag suggested: {}", key);
+                    data.insert(String::from(key), HashtagAttributes::new_suggestion());
+                }
+            }
+        }
+        self.persist().await.unwrap()
     }
 }

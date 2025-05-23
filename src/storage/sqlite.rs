@@ -1,4 +1,4 @@
-use crate::storage::traits::{DataAccessLayer, HashtagsCollection, StatusesIndexer};
+use crate::storage::traits::{DataAccessLayer, StatusTagsCollection, StatusesIndexer};
 use megalodon::entities::Status;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -72,7 +72,7 @@ impl StatusesIndexer for SqliteDal {
     }
 }
 
-impl HashtagsCollection for SqliteDal {
+impl StatusTagsCollection for SqliteDal {
     fn popular_tags(
         &self,
         duration_days: &u16,

@@ -1,5 +1,8 @@
 use crate::mastodon::MastodonClient;
 use crate::storage::Storage;
+use crate::storage::traits::RecentStatusesService;
+use crate::storage::traits::StatusesService;
+use crate::storage::traits::SubscribedHashtagsService;
 use actix_web::web::Html;
 use actix_web::{Responder, error, get, web};
 use log::debug;

@@ -1,4 +1,6 @@
 use crate::storage::Storage;
+use crate::storage::traits::StatusesService;
+use crate::storage::traits::SubscribedHashtagsService;
 use actix_web::web::Html;
 use actix_web::{HttpResponse, Responder, error, get, post, web};
 use serde::Deserialize;

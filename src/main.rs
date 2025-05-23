@@ -6,13 +6,13 @@ mod templating;
 use crate::mastodon::MastodonClient;
 use crate::services::hashtags::hashtags_config;
 use crate::services::timeline::timeline_config;
-use crate::storage::sqlite::SqliteDal;
 use crate::storage::Storage;
+use crate::storage::sqlite::SqliteDal;
 use crate::templating::init_tera;
 use actix_files::{Files, NamedFile};
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
-use actix_web::{get, middleware, App, HttpServer};
+use actix_web::{App, HttpServer, get, middleware};
 use std::env;
 use std::error::Error;
 

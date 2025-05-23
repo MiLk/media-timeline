@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde_json::to_value;
 use std::collections::HashMap;
 use std::ops::Sub;
-use tera::{try_get_value, Tera};
+use tera::{Tera, try_get_value};
 
 fn timedelta_filter(
     value: &tera::Value,
