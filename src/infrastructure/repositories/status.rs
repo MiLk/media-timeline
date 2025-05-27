@@ -1,52 +1,54 @@
-use crate::storage::traits::{DataAccessLayer, StatusTagsCollection, StatusesIndexer};
+use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRepository};
+use crate::infrastructure::database::sqlite;
+use async_trait::async_trait;
 use megalodon::entities::Status;
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{Row, ToSql, params};
+use rusqlite::{OptionalExtension, Row, ToSql, params};
 use std::error::Error;
+use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct SqliteDal(Pool<SqliteConnectionManager>);
+pub struct RecentStatusSqliteRepository {
+    pool: Arc<sqlite::Connection>,
+}
 
-impl SqliteDal {
-    fn create_sqlite_tables(pool: &Pool<SqliteConnectionManager>) -> Result<(), Box<dyn Error>> {
-        let conn = pool.get()?;
-        conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS statuses (
-                id   TEXT NOT NULL PRIMARY KEY,
-                created_at TEXT NOT NULL,
-                account_id TEXT NOT NULL,
-                account_acct TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS status_tags (
-                status_id   TEXT NOT NULL,
-                name   TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS status_tags_idx ON status_tags (status_id, name);",
+impl RecentStatusSqliteRepository {
+    pub fn new(pool: Arc<sqlite::Connection>) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl RecentStatusRepository for RecentStatusSqliteRepository {
+    fn get_recent_status_id(&self, key: &str) -> Result<Option<String>, Box<dyn Error>> {
+        let conn = self.pool.get()?;
+        let mut stmt =
+            conn.prepare_cached("SELECT status_id FROM recent_statuses WHERE tag = ?1")?;
+        let result = stmt.query_row(params![key], |row| row.get(0)).optional()?;
+        Ok(result)
+    }
+
+    fn set_recent_status_id(&self, key: &String, value: &String) -> Result<(), Box<dyn Error>> {
+        let conn = self.pool.get()?;
+        let mut stmt = conn.prepare_cached(
+            "INSERT OR REPLACE INTO recent_statuses(tag, status_id) VALUES (?1, ?2);",
         )?;
+        stmt.execute(params![key, value])?;
         Ok(())
     }
 }
 
-impl SqliteDal {
-    pub fn new() -> Result<Self, Box<dyn Error>> {
-        let manager = SqliteConnectionManager::file("data/db.sqlite3");
-        let pool = Pool::new(manager).expect("unable to create db pool");
+pub struct StatusSqliteRepository {
+    pool: Arc<sqlite::Connection>,
+}
 
-        {
-            let conn = pool.get()?;
-            conn.pragma_update(None, "synchronous", "NORMAL")?;
-            conn.pragma_update(None, "journal_mode", "MEMORY")?;
-        }
-
-        Self::create_sqlite_tables(&pool)?;
-        Ok(Self(pool))
+impl StatusSqliteRepository {
+    pub fn new(pool: Arc<sqlite::Connection>) -> Self {
+        Self { pool }
     }
 }
 
-impl StatusesIndexer for SqliteDal {
+impl StatusIndexRepository for StatusSqliteRepository {
     fn insert_statuses(&self, statuses: Vec<&Status>) -> Result<(), Box<dyn Error>> {
-        let mut conn = self.0.get()?;
+        let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         {
             let mut stmt = tx.prepare_cached("INSERT OR REPLACE INTO statuses (id, created_at, account_id, account_acct) VALUES (?1, ?2, ?3, ?4)")?;
@@ -70,15 +72,13 @@ impl StatusesIndexer for SqliteDal {
         tx.commit()?;
         Ok(())
     }
-}
 
-impl StatusTagsCollection for SqliteDal {
     fn popular_tags(
         &self,
         duration_days: &u16,
         limit: &u16,
     ) -> Result<Vec<(String, u32)>, Box<dyn Error>> {
-        let conn = self.0.get()?;
+        let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
             "SELECT name, COUNT(*)
             FROM status_tags st
@@ -102,5 +102,3 @@ impl StatusTagsCollection for SqliteDal {
         Ok(results?)
     }
 }
-
-impl DataAccessLayer for SqliteDal {}

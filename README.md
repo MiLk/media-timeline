@@ -45,3 +45,53 @@ make setup/fedora
 ```sh
 make build/aarch64-linux
 ```
+
+## Architecture overview
+
+~~Inspired by~~ Stolen from [microsoft/cookiecutter-rust-actix-clean-architecture](https://github.com/microsoft/cookiecutter-rust-actix-clean-architecture/blob/main/docs/onion-architecture-article.md#architecture-overview).
+
+The onion architecture is a layered architecture based on the onion model.
+Where each layer in the onion model is used to define the different layers of an application.
+
+For this rust implementation 4 layers are used.
+* api (app) module: The outermost layer that contains the controllers and the endpoints definition, serialization and deserialization of the data, validation and error handling.
+* infrastructure: Layer that typically includes database connections, external APIs calls, logging and configuration management.
+* services: Layer that contains the application's services, which encapsulate the core business logic and provide a higher-level abstraction for the application to interact with the domain entities.
+* domain: The innermost layer that contains the core business logic and entities of the application.
+
+
+Folder structure:
+```
+.
+├── src
+│   ├── api
+│   │   ├── controllers
+│   │   │   └── ...  # controllers for the api
+│   │   └── dto # Data transfer objects
+│   │       └── ... # Individual DTOs
+│   ├── infrastructure
+│   │   ├── services
+│   │   │   └── ...  # Services that use third party libraries or services (e.g. email service)
+│   │   ├── databases
+│   │   │   └── ...  # Database adapaters and initialization
+│   │   ├── repositories
+│   │   │   └── ...  # Repositories for interacting with the databases
+│   │   └── models
+│   │       └── ...  # Database models
+│   ├── domain
+│   │   ├── mod.rs
+│   │   ├── constants.rs
+│   │   ├── errors.rs
+│   │   ├── models
+│   │   │   └── ...  # Business logic models traits or structs
+│   │   ├── services
+│   │   │   └── ...  # Service traits
+│   │   └── repositories
+│   │       └── ...  # Repository traits
+│   ├── services
+│   │   └── ...  # Concrete service implementation for interacting with the domain (business logic)
+│   ├── container.rs
+│   ├── create_app.rs # app factory
+│   ├── lib.rs
+│   └── main.rs
+```

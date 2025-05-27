@@ -21,7 +21,7 @@ fn timedelta_filter(
     Ok(to_value(format!("{}m", delta.num_minutes()))?)
 }
 
-pub fn init_tera() -> tera::Result<Tera> {
+pub fn initialize_tera() -> tera::Result<Tera> {
     let mut tera = Tera::new("templates/**/*.html")?;
     tera.register_filter("timedelta", timedelta_filter);
     Ok(tera)
