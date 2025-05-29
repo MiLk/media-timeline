@@ -1,0 +1,50 @@
+.d-none {
+    display: none;
+}
+
+@media screen and (max-width: 1174px) {
+    .d-block-mobile {
+        display: block;
+    }
+
+    .container {
+        flex-direction: column;
+        width: unset;
+        padding: 1em;
+    }
+
+    .column {
+        width: unset;
+        max-width: unset;
+
+        min-height: unset;
+        height: unset;
+        position: unset;
+    }
+
+    #intro {
+        color: #ddd9e8;
+        font-size: 0.875em;
+    }
+
+    ul#footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    .column-main {
+        order: 3;
+        width: unset;
+    }
+
+    #timeline {
+        width: unset;
+        border-left: none;
+        border-right: none;
+
+        .status {
+            padding: 1em 0;
+        }
+    }
+}
