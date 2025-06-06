@@ -15,6 +15,7 @@ pub trait StatusService: 'static + Sync + Send {
     async fn retrieve_statuses(
         &self,
         hashtags: Option<&Vec<String>>,
+        limit: u16,
     ) -> Result<Vec<Status>, Box<dyn Error>>;
     /// Retrieve the list of popular tags from the indexed statuses
     fn popular_tags(

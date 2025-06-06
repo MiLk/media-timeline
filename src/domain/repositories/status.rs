@@ -10,6 +10,13 @@ pub trait RecentStatusRepository: 'static + Sync + Send {
 
 pub trait StatusIndexRepository: 'static + Sync + Send {
     fn insert_statuses(&self, statuses: Vec<&Status>) -> Result<(), Box<dyn Error>>;
+
+    fn search_statuses(
+        &self,
+        hashtags: Option<&Vec<String>>,
+        limit: u16,
+    ) -> Result<Vec<String>, Box<dyn Error>>;
+
     fn popular_tags(
         &self,
         duration_days: &u16,

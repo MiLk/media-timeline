@@ -1,7 +1,7 @@
 use crate::domain::services::hashtag::SubscribedHashtagService;
 use crate::domain::services::status::StatusService;
 use actix_web::web::Html;
-use actix_web::{error, get, web, Responder};
+use actix_web::{Responder, error, get, web};
 use log::debug;
 use megalodon::entities::Status;
 use serde::Serialize;
@@ -21,7 +21,10 @@ async fn get_timeline(
 ) -> Result<impl Responder, error::Error> {
     let hashtags = subscribed_hashtag_service.list_hashtags()?;
 
-    let mut statuses = status_service.retrieve_statuses(Some(&hashtags)).await?;
+    // TODO make the number of retrieved statuses configurable
+    let mut statuses = status_service
+        .retrieve_statuses(Some(&hashtags), 200)
+        .await?;
     statuses.sort_by_key(|status| Reverse(status.created_at));
 
     debug!("{} statuses retrieved from storage", statuses.len());

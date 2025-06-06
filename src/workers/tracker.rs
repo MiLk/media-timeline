@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
-use tokio_util::task::task_tracker::TaskTrackerWaitFuture;
 use tokio_util::task::TaskTracker;
+use tokio_util::task::task_tracker::TaskTrackerWaitFuture;
 
 #[async_trait]
 pub trait Worker {

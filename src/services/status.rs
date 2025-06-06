@@ -2,15 +2,29 @@ use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRep
 use crate::domain::services::status::StatusService;
 use crate::infrastructure::services::mastodon::MastodonClient;
 use async_trait::async_trait;
-use glob::glob;
 use log::debug;
 use megalodon::entities::Status;
 use std::cmp::Reverse;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::fs::{File, create_dir_all};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+fn directory_for_status(status_id: &str) -> String {
+    let len = status_id.len();
+    let dir1 = if len <= 18 {
+        "0"
+    } else {
+        &status_id[0..len - 18]
+    };
+    let dir2 = if len <= 14 {
+        "0"
+    } else {
+        &status_id[0..len - 14]
+    };
+    format!("data/statuses/{}/{}", dir1, dir2)
+}
 
 pub struct StatusServiceImpl {
     mastodon_client: Arc<MastodonClient>,
@@ -93,29 +107,17 @@ impl StatusService for StatusServiceImpl {
             status: Status,
             index_repository: Arc<dyn StatusIndexRepository>,
         ) -> () {
-            let status_id = status.id.clone();
-            let len = status_id.len();
-            let dir1 = if len <= 18 {
-                "0"
-            } else {
-                &status_id[0..len - 18]
-            };
-            let dir2 = if len <= 14 {
-                "0"
-            } else {
-                &status_id[0..len - 14]
-            };
-            let dir = format!("data/statuses/{}/{}", dir1, dir2);
+            let dir = directory_for_status(&status.id.as_str());
             create_dir_all(&dir)
                 .await
                 .expect(format!("failed to create dir {}", dir).as_str());
-            let filepath = format!("{}/{}.json", dir, &status_id);
+            let filepath = format!("{}/{}.json", dir, &status.id);
             let mut file = File::create(&filepath)
                 .await
                 .expect(format!("failed to create file {}", &filepath).as_str());
             file.write_all(
                 serde_json::to_string(&status)
-                    .expect(format!("failed to serialize status {}", &status_id).as_str())
+                    .expect(format!("failed to serialize status {}", &status.id).as_str())
                     .as_bytes(),
             )
             .await
@@ -123,7 +125,7 @@ impl StatusService for StatusServiceImpl {
 
             index_repository
                 .insert_statuses(vec![&status])
-                .expect(format!("failed to insert status {}", &status_id).as_str());
+                .expect(format!("failed to insert status {}", &status.id).as_str());
         }
 
         let mut tasks = Vec::with_capacity(statuses.len());
@@ -142,25 +144,18 @@ impl StatusService for StatusServiceImpl {
     async fn retrieve_statuses(
         &self,
         hashtags: Option<&Vec<String>>,
+        limit: u16,
     ) -> Result<Vec<Status>, Box<dyn Error>> {
-        let set_o: Option<HashSet<String>> =
-            hashtags.map(|hts| hts.iter().map(|s| s.to_lowercase()).collect());
+        let status_ids = self.index_repository.search_statuses(hashtags, limit)?;
         let mut statuses = Vec::new();
-        for entry in glob("data/statuses/**/*.json")? {
-            let path = entry?;
-            let mut file = File::open(path).await?;
+        for id in status_ids {
+            let dir = directory_for_status(&id);
+            let filepath = format!("{}/{}.json", dir, &id);
+            let mut file = File::open(filepath).await?;
             let mut content = String::new();
             file.read_to_string(&mut content).await?;
             let decoded: Status = serde_json::from_str(content.as_str())?;
-            if match &set_o {
-                Some(set) => decoded
-                    .tags
-                    .iter()
-                    .any(|t| set.contains(t.name.to_lowercase().as_str())),
-                None => true,
-            } {
-                statuses.push(decoded);
-            }
+            statuses.push(decoded);
         }
         debug!("{} statuses read from storage", statuses.len());
         Ok(statuses)

@@ -2,7 +2,7 @@ use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRep
 use crate::infrastructure::database::sqlite;
 use async_trait::async_trait;
 use megalodon::entities::Status;
-use rusqlite::{OptionalExtension, Row, ToSql, params};
+use rusqlite::{params, OptionalExtension, Row, ToSql};
 use std::error::Error;
 use std::sync::Arc;
 
@@ -71,6 +71,47 @@ impl StatusIndexRepository for StatusSqliteRepository {
         }
         tx.commit()?;
         Ok(())
+    }
+
+    fn search_statuses(
+        &self,
+        hashtags_o: Option<&Vec<String>>,
+        limit: u16,
+    ) -> Result<Vec<String>, Box<dyn Error>> {
+        let hashtags_clause: String = match hashtags_o {
+            Some(hashtags) => {
+                let n = hashtags.len();
+                let mut s = "?,".repeat(n);
+                s.pop();
+                format!("WHERE lower(st.name) IN ({})", s)
+            }
+            None => String::new(),
+        };
+
+        let conn = self.pool.get()?;
+        let sql = format!(
+            "SELECT DISTINCT(s.id)
+            FROM statuses s
+            LEFT JOIN status_tags st ON st.status_id = s.id
+            {}
+            ORDER BY s.created_at DESC
+            LIMIT :limit;",
+            hashtags_clause
+        );
+        let mut stmt = conn.prepare(&sql)?;
+
+        // use raw_bind_parameter because we mix parameters of different types
+        // and dynamic number of parameters
+        if let Some(hashtags) = hashtags_o {
+            for (i, tag) in hashtags.iter().enumerate() {
+                stmt.raw_bind_parameter(i + 1, tag.to_lowercase())?;
+            }
+        }
+        stmt.raw_bind_parameter(c":limit", limit)?;
+
+        let statuses: rusqlite::Result<Vec<String>> =
+            stmt.raw_query().map(|row| row.get(0)).collect();
+        Ok(statuses?)
     }
 
     fn popular_tags(
