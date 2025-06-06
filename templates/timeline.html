@@ -24,7 +24,7 @@
                target="_blank" rel="noopener noreferrer">
                 <div class="status__avatar">
                     <div class="account__avatar" style="width: 46px; height: 46px;">
-                        <img src="{{ status.account.avatar_static }}" alt="">
+                        <img loading="lazy" src="{{ status.account.avatar_static }}" alt="">
                     </div>
                 </div>
                 <span class="display-name">
@@ -51,6 +51,7 @@
                             src=" {{ attachment.preview_url }}"
                             srcset="{{ attachment.url }} {{ attachment.meta.original.width }}w, {{ attachment.preview_url }} {{ attachment.meta.small.width }}w"
                             sizes="{% if status.media_attachments | length > 1 %}283px{% else %}566px{% endif %}"
+                            loading="lazy"
                             alt="{{ attachment.description }}" title="{{ attachment.description }}"
                             lang="en" style="object-position: 50% 50%;"/>
                 </a>
