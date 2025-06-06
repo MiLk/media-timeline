@@ -2,7 +2,7 @@ use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRep
 use crate::infrastructure::database::sqlite;
 use async_trait::async_trait;
 use megalodon::entities::Status;
-use rusqlite::{params, OptionalExtension, Row, ToSql};
+use rusqlite::{OptionalExtension, Row, ToSql, params};
 use std::error::Error;
 use std::sync::Arc;
 
