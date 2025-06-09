@@ -22,7 +22,9 @@ pub fn create_app(
 > {
     App::new()
         .configure(|cfg| container.config(cfg))
-        .wrap(Logger::default())
+        .wrap(Logger::new(
+            r#"%{r}a "%r" %s %b "%{Referer}i" "%{User-Agent}i" %T"#,
+        ))
         .wrap(middleware::Compress::default())
         .wrap(middleware::NormalizePath::trim())
         .configure(hashtags_config)
