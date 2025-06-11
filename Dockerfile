@@ -94,6 +94,7 @@ WORKDIR /app
 COPY --from=rust-build --chown=appuser:appuser /output/bin/${APPLICATION_NAME} /app/entrypoint
 COPY --chown=appuser:appuser static  /app/static
 COPY --chown=appuser:appuser templates  /app/templates
+COPY --chown=appuser:appuser config.toml  /app/config.toml
 
 VOLUME /app/data
 EXPOSE 1337

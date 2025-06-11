@@ -14,6 +14,7 @@ use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 
 pub struct TimelineUpdater {
+    update_frequency: Duration,
     status_service: Arc<dyn StatusService>,
     subscribed_hashtag_service: Arc<dyn SubscribedHashtagService>,
 }
@@ -21,6 +22,7 @@ pub struct TimelineUpdater {
 impl TimelineUpdater {
     pub fn new(container: Arc<Container>) -> Self {
         Self {
+            update_frequency: container.settings.application.timeline_update_frequency(),
             status_service: container.status_service.clone(),
             subscribed_hashtag_service: container.subscribed_hashtag_service.clone(),
         }
@@ -72,7 +74,7 @@ impl Worker for TimelineUpdater {
         self.fetch_new_statuses().await.unwrap();
         loop {
             tokio::select! {
-                _ = sleep(Duration::from_secs(300)) => {
+                _ = sleep(self.update_frequency) => {
                     self.fetch_new_statuses().await.unwrap();
                     continue;
                 }

@@ -36,25 +36,12 @@
         <div class="divider d-none d-block-mobile"></div>
     </div>
     <div class="column-main">
-        <div id="timeline">
+        <div id="timeline" hx-get="/timeline"
+             hx-trigger="load,every 5m">
             Loading...
         </div>
     </div>
     <div class="column">
-        <section>
-            <button
-                    class="button"
-                    hx-get="/timeline"
-                    hx-trigger="load,click"
-                    hx-target="#timeline"
-                    hx-disabled-elt="this"
-                    style="width: 100%;"
-            >
-                <span class="material-symbols-outlined">refresh</span>
-                Reload timeline
-            </button>
-        </section>
-        <div class="divider"></div>
         <section
             hx-get="/tags"
             hx-trigger="load,tags-updated from:body"
