@@ -56,8 +56,8 @@ fn init_logger(settings: &BasicSettings<ApplicationSettings>) {
         std::env::set_var(
             "RUST_LOG",
             match settings.actix.mode {
-                Mode::Development => "actix_web=debug",
-                Mode::Production => "actix_web=info",
+                Mode::Development => "debug,actix_web=debug,media_timeline=debug",
+                Mode::Production => "info,actix_web=info,media_timeline=debug",
             },
         );
 
