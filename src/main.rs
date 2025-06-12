@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         HttpServer::new(move || create_app(container.clone())).try_apply_settings(&settings)?;
 
     for (addr, scheme) in server.addrs_with_scheme() {
-        println!("Listening on {}://{}", scheme, addr);
+        log::info!("Listening on {}://{}", scheme, addr);
     }
 
     server.run().await?;
