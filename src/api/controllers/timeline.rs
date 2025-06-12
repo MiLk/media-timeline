@@ -68,7 +68,7 @@ async fn get_timeline(
                     header::CacheDirective::Private,
                     header::CacheDirective::MaxAge(
                         settings
-                            .timeline_update_frequency()
+                            .timeline_update_frequency
                             .as_secs()
                             .try_into()
                             .unwrap_or(300),

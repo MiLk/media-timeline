@@ -3,6 +3,7 @@ use actix_web::HttpServer;
 use media_timeline::container::Container;
 use media_timeline::create_app::create_app;
 use media_timeline::settings::ApplicationSettings;
+use media_timeline::workers::statuses::StatusRefresher;
 use media_timeline::workers::timeline::TimelineUpdater;
 use media_timeline::workers::tracker::WorkerTracker;
 use std::error::Error;
@@ -28,6 +29,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let container: Arc<Container> = Arc::new(Container::new(settings.clone()).await);
     let mut workers = WorkerTracker::new();
     workers.register_worker(TimelineUpdater::new(container.clone()));
+    workers.register_worker(StatusRefresher::new(container.clone()));
     workers.start();
 
     let server =

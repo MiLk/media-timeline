@@ -1,6 +1,7 @@
 use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRepository};
 use crate::infrastructure::database::sqlite;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use megalodon::entities::Status;
 use rusqlite::fallible_iterator::FallibleIterator;
 use rusqlite::{OptionalExtension, Row, ToSql, params};
@@ -56,6 +57,10 @@ impl StatusIndexRepository for StatusSqliteRepository {
             let mut tag_stmt = tx.prepare_cached(
                 "INSERT OR REPLACE INTO status_tags (status_id, name) VALUES (?1, ?2)",
             )?;
+            let mut refresh_stmt = tx.prepare_cached(
+                "INSERT OR REPLACE INTO status_refreshes (id, refreshed_at) VALUES (?1, ?2)",
+            )?;
+            let now = Utc::now();
             for status in statuses {
                 let created_at = ToSql::to_sql(&status.created_at)?;
                 stmt.execute(params![
@@ -68,6 +73,8 @@ impl StatusIndexRepository for StatusSqliteRepository {
                 for tag in &status.tags {
                     tag_stmt.execute(params![&status.id, &tag.name])?;
                 }
+
+                refresh_stmt.execute(params![&status.id, &now])?;
             }
         }
         tx.commit()?;
@@ -112,6 +119,25 @@ impl StatusIndexRepository for StatusSqliteRepository {
 
         let statuses: rusqlite::Result<Vec<String>> =
             stmt.raw_query().map(|row| row.get(0)).collect();
+        Ok(statuses?)
+    }
+
+    fn list_stale_statuses(
+        &self,
+        since: DateTime<Utc>,
+        fresh_since: DateTime<Utc>,
+    ) -> Result<Vec<String>, Box<dyn Error>> {
+        let conn = self.pool.get()?;
+        let mut stmt = conn.prepare_cached(
+            "SELECT s.id
+            FROM statuses s
+            LEFT JOIN status_refreshes sr ON s.id = sr.id
+            WHERE s.created_at >= ?1 AND s.created_at < ?2 AND (sr.id IS NULL OR sr.refreshed_at < ?2)
+            ORDER BY s.created_at DESC;",
+        )?;
+        let statuses: rusqlite::Result<Vec<String>> = stmt
+            .query_map(params![since, fresh_since], |row| row.get(0))?
+            .collect();
         Ok(statuses?)
     }
 

@@ -70,5 +70,25 @@ private-key = "path/to/cert/key.pem"
 # The `application` table be used to express application-specific settings.
 # See the `README.md` file for more details on how to use this.
 [application]
-timeline-update-frequency-seconds = 300
+timeline-update-frequency = "5 minutes"
 timeline-statuses-count = 200
+
+[[application.status-refresh]]
+max-age = "3 hours"
+frequency = "15 minutes"
+
+[[application.status-refresh]]
+max-age = "1 day"
+frequency = "2 hours"
+
+[[application.status-refresh]]
+max-age = "3 days"
+frequency = "6 hours"
+
+[[application.status-refresh]]
+max-age = "7 days"
+frequency = "1 day"
+
+[[application.status-refresh]]
+max-age = "30 days"
+frequency = "7 days"

@@ -26,6 +26,9 @@ fn create_sqlite_tables(pool: &Connection) -> Result<(), Box<dyn Error>> {
                 status_id TEXT NOT NULL,
                 name TEXT NOT NULL);
             CREATE INDEX IF NOT EXISTS status_tags_idx ON status_tags (status_id, name);
+            CREATE TABLE IF NOT EXISTS status_refreshes(
+                id TEXT NOT NULL PRIMARY KEY,
+                refreshed_at TEXT NOT NULL);
             ",
     )?;
     Ok(())

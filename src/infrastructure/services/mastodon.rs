@@ -36,4 +36,8 @@ impl MastodonClient {
             .await
             .map(|res| res.json())
     }
+
+    pub async fn get_status(&self, id: String) -> Result<entities::Status, Error> {
+        self.client.get_status(id).await.map(|res| res.json())
+    }
 }

@@ -2,8 +2,10 @@ use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRep
 use crate::domain::services::status::StatusService;
 use crate::infrastructure::services::mastodon::MastodonClient;
 use async_trait::async_trait;
-use log::debug;
+use chrono::{DateTime, Utc};
+use log::{debug, warn};
 use megalodon::entities::Status;
+use megalodon::error::Error::OwnError;
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::error::Error;
@@ -102,6 +104,22 @@ impl StatusService for StatusServiceImpl {
             }
         }
     }
+
+    async fn fetch_statuses(&self, ids: &[String]) -> Result<Vec<Status>, Box<dyn Error>> {
+        let mut statuses: Vec<Status> = vec![];
+        for id in ids {
+            let status = self.mastodon_client.get_status(id.clone()).await;
+            match status {
+                Ok(v) => statuses.push(v),
+                Err(OwnError(err)) if err.status == Some(404) => {
+                    warn!("Status {} not found - probably deleted", id);
+                }
+                Err(err) => return Err(err.into()),
+            }
+        }
+        Ok(statuses)
+    }
+
     async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), Box<dyn Error>> {
         async fn write_status(
             status: Status,
@@ -159,6 +177,15 @@ impl StatusService for StatusServiceImpl {
         }
         debug!("{} statuses read from storage", statuses.len());
         Ok(statuses)
+    }
+
+    async fn list_stale_statuses(
+        &self,
+        since: DateTime<Utc>,
+        fresh_since: DateTime<Utc>,
+    ) -> Result<Vec<String>, Box<dyn Error>> {
+        self.index_repository
+            .list_stale_statuses(since, fresh_since)
     }
 
     fn popular_tags(

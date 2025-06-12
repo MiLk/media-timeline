@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use log::debug;
 use std::cmp::Reverse;
 use std::error::Error;
+use std::ops::Deref;
 use std::panic;
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,14 +23,17 @@ pub struct TimelineUpdater {
 impl TimelineUpdater {
     pub fn new(container: Arc<Container>) -> Self {
         Self {
-            update_frequency: container.settings.application.timeline_update_frequency(),
+            update_frequency: container
+                .settings
+                .application
+                .timeline_update_frequency
+                .deref()
+                .clone(),
             status_service: container.status_service.clone(),
             subscribed_hashtag_service: container.subscribed_hashtag_service.clone(),
         }
     }
-}
 
-impl TimelineUpdater {
     async fn fetch_new_statuses(&self) -> Result<(), Box<dyn Error>> {
         let hashtags = self.subscribed_hashtag_service.list_hashtags()?;
 

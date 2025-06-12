@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use megalodon::entities::Status;
 use std::error::Error;
 
@@ -15,6 +16,12 @@ pub trait StatusIndexRepository: 'static + Sync + Send {
         &self,
         hashtags: Option<&Vec<String>>,
         limit: u16,
+    ) -> Result<Vec<String>, Box<dyn Error>>;
+
+    fn list_stale_statuses(
+        &self,
+        since: DateTime<Utc>,
+        fresh_since: DateTime<Utc>,
     ) -> Result<Vec<String>, Box<dyn Error>>;
 
     fn popular_tags(
