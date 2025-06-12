@@ -29,9 +29,8 @@ async fn get_timeline(
 ) -> Result<impl Responder, error::Error> {
     let hashtags = subscribed_hashtag_service.list_hashtags()?;
 
-    // TODO make the number of retrieved statuses configurable
     let mut statuses = status_service
-        .retrieve_statuses(Some(&hashtags), 200)
+        .retrieve_statuses(Some(&hashtags), settings.timeline_statuses_count)
         .await?;
     statuses.sort_by_key(|status| Reverse(status.created_at));
 

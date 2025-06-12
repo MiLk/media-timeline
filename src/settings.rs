@@ -4,7 +4,8 @@ use std::time::Duration;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ApplicationSettings {
-    timeline_update_frequency_seconds: u64,
+    pub timeline_update_frequency_seconds: u64,
+    pub timeline_statuses_count: u16,
 }
 
 impl ApplicationSettings {
