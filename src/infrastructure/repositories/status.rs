@@ -53,7 +53,7 @@ impl StatusIndexRepository for StatusSqliteRepository {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         {
-            let mut stmt = tx.prepare_cached("INSERT OR REPLACE INTO statuses (id, created_at, account_id, account_acct) VALUES (?1, ?2, ?3, ?4)")?;
+            let mut stmt = tx.prepare_cached("INSERT OR REPLACE INTO statuses (id, created_at, account_id, account_acct, replies_count, reblogs_count, favourites_count) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)")?;
             let mut tag_stmt = tx.prepare_cached(
                 "INSERT OR REPLACE INTO status_tags (status_id, name) VALUES (?1, ?2)",
             )?;
@@ -67,7 +67,10 @@ impl StatusIndexRepository for StatusSqliteRepository {
                     &status.id,
                     &created_at,
                     &status.account.id,
-                    &status.account.acct
+                    &status.account.acct,
+                    &status.replies_count,
+                    &status.reblogs_count,
+                    &status.favourites_count,
                 ])?;
 
                 for tag in &status.tags {
@@ -115,6 +118,50 @@ impl StatusIndexRepository for StatusSqliteRepository {
                 stmt.raw_bind_parameter(i + 1, tag.to_lowercase())?;
             }
         }
+        stmt.raw_bind_parameter(c":limit", limit)?;
+
+        let statuses: rusqlite::Result<Vec<String>> =
+            stmt.raw_query().map(|row| row.get(0)).collect();
+        Ok(statuses?)
+    }
+
+    fn popular_statuses(
+        &self,
+        hashtags_o: Option<&Vec<String>>,
+        since: DateTime<Utc>,
+        limit: u16,
+    ) -> Result<Vec<String>, Box<dyn Error>> {
+        let hashtags_clause: String = match hashtags_o {
+            Some(hashtags) => {
+                let n = hashtags.len();
+                let mut s = "?,".repeat(n);
+                s.pop();
+                format!("WHERE lower(st.name) IN ({})", s)
+            }
+            None => String::new(),
+        };
+
+        let conn = self.pool.get()?;
+        let sql = format!(
+            "SELECT DISTINCT(s.id)
+            FROM statuses s
+            LEFT JOIN status_tags st ON st.status_id = s.id
+            {}
+            AND s.created_at >= :created_at
+            ORDER BY s.engagements_count DESC
+            LIMIT :limit;",
+            hashtags_clause
+        );
+        let mut stmt = conn.prepare(&sql)?;
+
+        // use raw_bind_parameter because we mix parameters of different types
+        // and dynamic number of parameters
+        if let Some(hashtags) = hashtags_o {
+            for (i, tag) in hashtags.iter().enumerate() {
+                stmt.raw_bind_parameter(i + 1, tag.to_lowercase())?;
+            }
+        }
+        stmt.raw_bind_parameter(c":created_at", since)?;
         stmt.raw_bind_parameter(c":limit", limit)?;
 
         let statuses: rusqlite::Result<Vec<String>> =

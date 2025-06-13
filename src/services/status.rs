@@ -46,6 +46,21 @@ impl StatusServiceImpl {
             index_repository,
         }
     }
+
+    async fn load_from_disk(&self, ids: Vec<String>) -> Result<Vec<Status>, Box<dyn Error>> {
+        let mut statuses = Vec::new();
+        for id in ids {
+            let dir = directory_for_status(&id);
+            let filepath = format!("{}/{}.json", dir, &id);
+            let mut file = File::open(filepath).await?;
+            let mut content = String::new();
+            file.read_to_string(&mut content).await?;
+            let decoded: Status = serde_json::from_str(content.as_str())?;
+            statuses.push(decoded);
+        }
+        debug!("{} statuses read from storage", statuses.len());
+        Ok(statuses)
+    }
 }
 
 #[async_trait]
@@ -165,18 +180,19 @@ impl StatusService for StatusServiceImpl {
         limit: u16,
     ) -> Result<Vec<Status>, Box<dyn Error>> {
         let status_ids = self.index_repository.search_statuses(hashtags, limit)?;
-        let mut statuses = Vec::new();
-        for id in status_ids {
-            let dir = directory_for_status(&id);
-            let filepath = format!("{}/{}.json", dir, &id);
-            let mut file = File::open(filepath).await?;
-            let mut content = String::new();
-            file.read_to_string(&mut content).await?;
-            let decoded: Status = serde_json::from_str(content.as_str())?;
-            statuses.push(decoded);
-        }
-        debug!("{} statuses read from storage", statuses.len());
-        Ok(statuses)
+        self.load_from_disk(status_ids).await
+    }
+
+    async fn popular_statuses(
+        &self,
+        hashtags: Option<&Vec<String>>,
+        since: DateTime<Utc>,
+        limit: u16,
+    ) -> Result<Vec<Status>, Box<dyn Error>> {
+        let status_ids = self
+            .index_repository
+            .popular_statuses(hashtags, since, limit)?;
+        self.load_from_disk(status_ids).await
     }
 
     async fn list_stale_statuses(

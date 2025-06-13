@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
           rel="stylesheet">
     <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=at,attribution,code,globe,lock,lock_open,recommend,refresh,taunt"/>
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=at,attribution,code,globe,lock,lock_open,recommend,refresh,star_shine,taunt"/>
     <link rel="stylesheet" href="https://unpkg.com/normalize.css@8.0.1/normalize.css"/>
     <link rel="stylesheet" href="/style.css"/>
     <link rel="stylesheet" href="/index.css"/>
@@ -42,6 +42,33 @@
         </div>
     </div>
     <div class="column">
+        <section>
+            <button
+                    class="button"
+                    hx-get="/timeline/popular"
+                    hx-trigger="click"
+                    hx-target="#timeline"
+                    hx-disabled-elt="this"
+                    style="width: 100%;"
+                    id="popular-timeline-button"
+            >
+                <span class="material-symbols-outlined">star_shine</span>
+                Popular posts
+            </button>
+            <button
+                class="button"
+                hx-get="/timeline"
+                hx-trigger="click"
+                hx-target="#timeline"
+                hx-disabled-elt="this"
+                style="width: 100%; display: none;"
+                id="recent-timeline-button"
+            >
+                <span class="material-symbols-outlined">refresh</span>
+                Recent posts
+            </button>
+        </section>
+        <div class="divider"></div>
         <section
             hx-get="/tags"
             hx-trigger="load,tags-updated from:body"
@@ -75,5 +102,6 @@
 <script src="https://unpkg.com/htmx.org@2.0.4"
         integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
         crossorigin="anonymous"></script>
+<script src="/index.js"></script>
 </body>
 </html>

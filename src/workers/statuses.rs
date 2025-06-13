@@ -4,7 +4,6 @@ use crate::settings::StatusRefreshSettings;
 use crate::workers::tracker::Worker;
 use async_trait::async_trait;
 use chrono::Utc;
-use log::debug;
 use std::error::Error;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -32,7 +31,7 @@ impl StatusRefresher {
         for frequency in &self.frequencies {
             let since = Utc::now() - frequency.max_age.deref().clone();
             let fresh_since = Utc::now() - frequency.frequency.deref().clone();
-            debug!(
+            log::info!(
                 "Refreshing statuses with age={:?} and frequency={:?} - since={:?} fresh_since={:?}",
                 frequency.max_age.deref(),
                 frequency.frequency.deref(),
@@ -44,15 +43,16 @@ impl StatusRefresher {
                 .list_stale_statuses(since, fresh_since)
                 .await?;
 
-            debug!("Found {} stale statuses", status_ids.len());
+            log::debug!("Found {} stale statuses", status_ids.len());
 
             let mut statuses = vec![];
-            for chunk in status_ids.chunks(10) {
+            for (i, chunk) in status_ids.chunks(10).enumerate() {
+                log::debug!("Refreshing chunk {}/{}", i + 1, status_ids.len() / 10 + 1);
                 statuses.extend(self.status_service.fetch_statuses(chunk).await?);
                 sleep(Duration::from_secs(5)).await;
             }
             self.status_service.persist_statuses(&statuses).await?;
-            debug!("Refreshed {} statuses", statuses.len());
+            log::info!("Refreshed {} statuses", statuses.len());
         }
         Ok(())
     }

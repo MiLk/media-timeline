@@ -18,6 +18,13 @@ pub trait StatusIndexRepository: 'static + Sync + Send {
         limit: u16,
     ) -> Result<Vec<String>, Box<dyn Error>>;
 
+    fn popular_statuses(
+        &self,
+        hashtags_o: Option<&Vec<String>>,
+        since: DateTime<Utc>,
+        limit: u16,
+    ) -> Result<Vec<String>, Box<dyn Error>>;
+
     fn list_stale_statuses(
         &self,
         since: DateTime<Utc>,

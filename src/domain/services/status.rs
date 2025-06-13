@@ -21,6 +21,13 @@ pub trait StatusService: 'static + Sync + Send {
         limit: u16,
     ) -> Result<Vec<Status>, Box<dyn Error>>;
 
+    async fn popular_statuses(
+        &self,
+        hashtags: Option<&Vec<String>>,
+        since: DateTime<Utc>,
+        limit: u16,
+    ) -> Result<Vec<Status>, Box<dyn Error>>;
+
     // List ID for statuses created after `since` but refreshed before `fresh_since`.
     async fn list_stale_statuses(
         &self,
