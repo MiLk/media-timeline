@@ -62,6 +62,7 @@ FROM rust-cargo-build AS rust-build
 WORKDIR /build/${APPLICATION_NAME}
 
 COPY src ./src
+COPY migrations ./migrations
 
 # ensure cargo picks up on the change
 RUN touch ./src/main.rs
