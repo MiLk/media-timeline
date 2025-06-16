@@ -75,7 +75,7 @@ impl Worker for StatusRefresher {
             }
         };
 
-        log::info!("starting timeline updater worker");
+        log::info!("starting status refresher worker");
         match self.refresh_statuses().await {
             Ok(_) => {}
             Err(e) => {
