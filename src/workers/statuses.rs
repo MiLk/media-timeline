@@ -11,6 +11,9 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tokio_util::sync::CancellationToken;
 
+const STATUS_CHUNK_SIZE: u16 = 10;
+const STATUS_CHUNK_COUNT: u16 = 10;
+
 pub struct StatusRefresher {
     frequencies: Vec<StatusRefreshSettings>,
     status_service: Arc<dyn StatusService>,
@@ -40,16 +43,16 @@ impl StatusRefresher {
             );
             let status_ids: Vec<String> = self
                 .status_service
-                .list_stale_statuses(since, fresh_since)
+                .list_stale_statuses(since, fresh_since, STATUS_CHUNK_SIZE * STATUS_CHUNK_COUNT)
                 .await?;
 
             log::debug!("Found {} stale statuses", status_ids.len());
 
             let mut statuses = vec![];
-            for (i, chunk) in status_ids.chunks(10).enumerate() {
+            for (i, chunk) in status_ids.chunks(STATUS_CHUNK_SIZE.into()).enumerate() {
                 log::debug!("Refreshing chunk {}/{}", i + 1, status_ids.len() / 10 + 1);
                 statuses.extend(self.status_service.fetch_statuses(chunk).await?);
-                sleep(Duration::from_secs(5)).await;
+                sleep(Duration::from_secs(10)).await;
             }
             self.status_service.persist_statuses(&statuses).await?;
             log::info!("Refreshed {} statuses", statuses.len());

@@ -199,9 +199,10 @@ impl StatusService for StatusServiceImpl {
         &self,
         since: DateTime<Utc>,
         fresh_since: DateTime<Utc>,
+        limit: u16,
     ) -> Result<Vec<String>, Box<dyn Error>> {
         self.index_repository
-            .list_stale_statuses(since, fresh_since)
+            .list_stale_statuses(since, fresh_since, limit)
     }
 
     fn popular_tags(

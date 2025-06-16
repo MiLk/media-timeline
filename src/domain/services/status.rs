@@ -33,6 +33,7 @@ pub trait StatusService: 'static + Sync + Send {
         &self,
         since: DateTime<Utc>,
         fresh_since: DateTime<Utc>,
+        limit: u16,
     ) -> Result<Vec<String>, Box<dyn Error>>;
 
     /// Retrieve the list of popular tags from the indexed statuses

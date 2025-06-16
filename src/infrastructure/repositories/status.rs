@@ -173,6 +173,7 @@ impl StatusIndexRepository for StatusSqliteRepository {
         &self,
         since: DateTime<Utc>,
         fresh_since: DateTime<Utc>,
+        limit: u16,
     ) -> Result<Vec<String>, Box<dyn Error>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
@@ -180,10 +181,11 @@ impl StatusIndexRepository for StatusSqliteRepository {
             FROM statuses s
             LEFT JOIN status_refreshes sr ON s.id = sr.id
             WHERE s.created_at >= ?1 AND s.created_at < ?2 AND (sr.id IS NULL OR sr.refreshed_at < ?2)
-            ORDER BY s.created_at DESC;",
+            ORDER BY s.created_at DESC
+            LIMIT ?3;",
         )?;
         let statuses: rusqlite::Result<Vec<String>> = stmt
-            .query_map(params![since, fresh_since], |row| row.get(0))?
+            .query_map(params![since, fresh_since, limit], |row| row.get(0))?
             .collect();
         Ok(statuses?)
     }
