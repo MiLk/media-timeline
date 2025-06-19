@@ -1,9 +1,10 @@
 use crate::container::Container;
 use crate::domain::services::hashtag::SubscribedHashtagService;
-use crate::domain::services::status::StatusService;
+use crate::domain::services::status::{StatusService, StatusServiceError};
 use crate::workers::tracker::Worker;
 use async_trait::async_trait;
 use log::debug;
+use megalodon::entities::Status;
 use std::cmp::Reverse;
 use std::error::Error;
 use std::ops::Deref;
@@ -37,26 +38,33 @@ impl TimelineUpdater {
     async fn fetch_new_statuses(&self) -> Result<(), Box<dyn Error>> {
         let hashtags = self.subscribed_hashtag_service.list_hashtags()?;
 
-        let mut tasks = JoinSet::new();
+        let mut tasks: JoinSet<Result<(String, Vec<Status>), StatusServiceError>> = JoinSet::new();
         for hashtag in &hashtags {
             let svc = self.status_service.clone();
             let hashtag_ = hashtag.clone();
-            tasks.spawn(async move { (hashtag_.clone(), svc.paginate_timeline(hashtag_).await) });
+            tasks.spawn(async move {
+                svc.paginate_timeline(&hashtag_)
+                    .await
+                    .map(|statuses| (hashtag_.clone(), statuses))
+            });
         }
 
         let mut statuses = vec![];
-        while let Some(res) = tasks.join_next().await {
-            match res {
-                Ok((hashtag, h_statuses)) => {
-                    debug!(
-                        "Retrieved {} statuses for tag {}",
-                        h_statuses.len(),
-                        &hashtag
-                    );
-                    statuses.extend(h_statuses);
-                }
+        while let Some(task) = tasks.join_next().await {
+            match task {
+                Ok(res) => match res {
+                    Ok((hashtag, h_statuses)) => {
+                        debug!(
+                            "Retrieved {} statuses for tag {}",
+                            h_statuses.len(),
+                            &hashtag
+                        );
+                        statuses.extend(h_statuses);
+                    }
+                    Err(err) => Err(err)?,
+                },
                 Err(err) if err.is_panic() => panic::resume_unwind(err.into_panic()),
-                Err(err) => panic!("{err}"),
+                Err(err) => Err(err)?,
             }
         }
 
@@ -75,11 +83,17 @@ impl TimelineUpdater {
 impl Worker for TimelineUpdater {
     async fn run(&self, cancellation_token: CancellationToken) {
         log::info!("starting timeline updater worker");
-        self.fetch_new_statuses().await.unwrap();
+        match self.fetch_new_statuses().await {
+            Ok(_) => {}
+            Err(err) => log::error!("failed to fetch new statuses: {}", err),
+        };
         loop {
             tokio::select! {
                 _ = sleep(self.update_frequency) => {
-                    self.fetch_new_statuses().await.unwrap();
+                    match self.fetch_new_statuses().await {
+                        Ok(_) => {}
+                        Err(err) => log::error!("failed to fetch new statuses: {}", err),
+                    };
                     continue;
                 }
 

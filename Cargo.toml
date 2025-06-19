@@ -28,3 +28,4 @@ tokio-util = { version = "0.7.15", features = ["rt"] }
 regex = "1.11.1"
 once_cell = "1.21.3"
 refinery = { git = "https://github.com/rust-db/refinery.git", rev = "3fa178fc2da8d29a897886b95d05435302811f6c", features = ["rusqlite"]}
+thiserror = "2.0.12"

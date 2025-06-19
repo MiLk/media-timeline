@@ -1,11 +1,11 @@
 use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRepository};
 use crate::infrastructure::database::sqlite;
+use crate::infrastructure::error::DbError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use megalodon::entities::Status;
 use rusqlite::fallible_iterator::FallibleIterator;
 use rusqlite::{OptionalExtension, Row, ToSql, params};
-use std::error::Error;
 use std::sync::Arc;
 
 pub struct RecentStatusSqliteRepository {
@@ -20,7 +20,7 @@ impl RecentStatusSqliteRepository {
 
 #[async_trait]
 impl RecentStatusRepository for RecentStatusSqliteRepository {
-    fn get_recent_status_id(&self, key: &str) -> Result<Option<String>, Box<dyn Error>> {
+    fn get_recent_status_id(&self, key: &str) -> Result<Option<String>, DbError> {
         let conn = self.pool.get()?;
         let mut stmt =
             conn.prepare_cached("SELECT status_id FROM recent_statuses WHERE tag = ?1")?;
@@ -28,7 +28,7 @@ impl RecentStatusRepository for RecentStatusSqliteRepository {
         Ok(result)
     }
 
-    fn set_recent_status_id(&self, key: &String, value: &String) -> Result<(), Box<dyn Error>> {
+    fn set_recent_status_id(&self, key: &String, value: &String) -> Result<(), DbError> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
             "INSERT OR REPLACE INTO recent_statuses(tag, status_id) VALUES (?1, ?2);",
@@ -49,7 +49,7 @@ impl StatusSqliteRepository {
 }
 
 impl StatusIndexRepository for StatusSqliteRepository {
-    fn insert_statuses(&self, statuses: Vec<&Status>) -> Result<(), Box<dyn Error>> {
+    fn insert_statuses(&self, statuses: Vec<&Status>) -> Result<(), DbError> {
         let mut conn = self.pool.get()?;
         let tx = conn.transaction()?;
         {
@@ -88,7 +88,7 @@ impl StatusIndexRepository for StatusSqliteRepository {
         &self,
         hashtags_o: Option<&Vec<String>>,
         limit: u16,
-    ) -> Result<Vec<String>, Box<dyn Error>> {
+    ) -> Result<Vec<String>, DbError> {
         let hashtags_clause: String = match hashtags_o {
             Some(hashtags) => {
                 let n = hashtags.len();
@@ -130,7 +130,7 @@ impl StatusIndexRepository for StatusSqliteRepository {
         hashtags_o: Option<&Vec<String>>,
         since: DateTime<Utc>,
         limit: u16,
-    ) -> Result<Vec<String>, Box<dyn Error>> {
+    ) -> Result<Vec<String>, DbError> {
         let hashtags_clause: String = match hashtags_o {
             Some(hashtags) => {
                 let n = hashtags.len();
@@ -174,7 +174,7 @@ impl StatusIndexRepository for StatusSqliteRepository {
         since: DateTime<Utc>,
         fresh_since: DateTime<Utc>,
         limit: u16,
-    ) -> Result<Vec<String>, Box<dyn Error>> {
+    ) -> Result<Vec<String>, DbError> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
             "SELECT s.id
@@ -194,7 +194,7 @@ impl StatusIndexRepository for StatusSqliteRepository {
         &self,
         duration_days: &u16,
         limit: &u16,
-    ) -> Result<Vec<(String, u32)>, Box<dyn Error>> {
+    ) -> Result<Vec<(String, u32)>, DbError> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare_cached(
             "SELECT name, COUNT(*)

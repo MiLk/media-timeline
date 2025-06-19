@@ -1,5 +1,6 @@
 use crate::domain::repositories::status::{RecentStatusRepository, StatusIndexRepository};
-use crate::domain::services::status::StatusService;
+
+use crate::domain::services::status::{StatusService, StatusServiceError};
 use crate::infrastructure::services::mastodon::MastodonClient;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -8,7 +9,6 @@ use megalodon::entities::Status;
 use megalodon::error::Error::OwnError;
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::error::Error;
 use std::sync::Arc;
 use tokio::fs::{File, create_dir_all};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -47,7 +47,7 @@ impl StatusServiceImpl {
         }
     }
 
-    async fn load_from_disk(&self, ids: Vec<String>) -> Result<Vec<Status>, Box<dyn Error>> {
+    async fn load_from_disk(&self, ids: Vec<String>) -> Result<Vec<Status>, StatusServiceError> {
         let mut statuses = Vec::new();
         for id in ids {
             let dir = directory_for_status(&id);
@@ -65,7 +65,7 @@ impl StatusServiceImpl {
 
 #[async_trait]
 impl StatusService for StatusServiceImpl {
-    async fn paginate_timeline(&self, hashtag: String) -> Vec<Status> {
+    async fn paginate_timeline(&self, hashtag: &String) -> Result<Vec<Status>, StatusServiceError> {
         match self
             .recent_repository
             .get_recent_status_id(hashtag.as_str())
@@ -75,14 +75,12 @@ impl StatusService for StatusServiceImpl {
                 let statuses = self
                     .mastodon_client
                     .get_tag_timeline(&hashtag, None)
-                    .await
-                    .expect("Unable to retrieve statuses from Mastodon API");
+                    .await?;
                 if let Some(status) = statuses.last() {
                     self.recent_repository
-                        .set_recent_status_id(&hashtag, &status.id)
-                        .expect("Unable to update the recent status ID locally");
+                        .set_recent_status_id(&hashtag, &status.id)?;
                 }
-                statuses
+                Ok(statuses)
             }
             Some(recent_id) => {
                 let mut statuses: Vec<Status> = vec![];
@@ -91,8 +89,7 @@ impl StatusService for StatusServiceImpl {
                     let page = self
                         .mastodon_client
                         .get_tag_timeline(&hashtag, Some(last_id))
-                        .await
-                        .expect("Unable to retrieve statuses from Mastodon API");
+                        .await?;
                     if page.is_empty() {
                         break;
                     }
@@ -115,12 +112,12 @@ impl StatusService for StatusServiceImpl {
                     statuses.extend(page)
                 }
                 statuses.sort_by_key(|status| Reverse((status.id.len(), status.id.clone())));
-                statuses
+                Ok(statuses)
             }
         }
     }
 
-    async fn fetch_statuses(&self, ids: &[String]) -> Result<Vec<Status>, Box<dyn Error>> {
+    async fn fetch_statuses(&self, ids: &[String]) -> Result<Vec<Status>, StatusServiceError> {
         let mut statuses: Vec<Status> = vec![];
         for id in ids {
             let status = self.mastodon_client.get_status(id.clone()).await;
@@ -135,7 +132,7 @@ impl StatusService for StatusServiceImpl {
         Ok(statuses)
     }
 
-    async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), Box<dyn Error>> {
+    async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), StatusServiceError> {
         async fn write_status(
             status: Status,
             index_repository: Arc<dyn StatusIndexRepository>,
@@ -178,7 +175,7 @@ impl StatusService for StatusServiceImpl {
         &self,
         hashtags: Option<&Vec<String>>,
         limit: u16,
-    ) -> Result<Vec<Status>, Box<dyn Error>> {
+    ) -> Result<Vec<Status>, StatusServiceError> {
         let status_ids = self.index_repository.search_statuses(hashtags, limit)?;
         self.load_from_disk(status_ids).await
     }
@@ -188,7 +185,7 @@ impl StatusService for StatusServiceImpl {
         hashtags: Option<&Vec<String>>,
         since: DateTime<Utc>,
         limit: u16,
-    ) -> Result<Vec<Status>, Box<dyn Error>> {
+    ) -> Result<Vec<Status>, StatusServiceError> {
         let status_ids = self
             .index_repository
             .popular_statuses(hashtags, since, limit)?;
@@ -200,16 +197,17 @@ impl StatusService for StatusServiceImpl {
         since: DateTime<Utc>,
         fresh_since: DateTime<Utc>,
         limit: u16,
-    ) -> Result<Vec<String>, Box<dyn Error>> {
+    ) -> Result<Vec<String>, StatusServiceError> {
         self.index_repository
             .list_stale_statuses(since, fresh_since, limit)
+            .map_err(|e| e.into())
     }
 
     fn popular_tags(
         &self,
         periods: Vec<u16>,
         limit: u16,
-    ) -> Result<HashMap<u16, Vec<(String, u32)>>, Box<dyn Error>> {
+    ) -> Result<HashMap<u16, Vec<(String, u32)>>, StatusServiceError> {
         periods
             .iter()
             .map(|&period| Ok((period, self.index_repository.popular_tags(&period, &limit)?)))
