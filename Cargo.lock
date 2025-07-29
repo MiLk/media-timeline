@@ -1490,14 +1490,14 @@ dependencies = [
 
 [[package]]
 name = "megalodon"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6053001f2fd3082f7c6007225fef9cf6c0bbea96d8fc82976fb0dcfda3bcbf30"
+version = "1.0.2"
+source = "git+https://github.com/MiLk/megalodon-rs.git?branch=mastodon-fep-044f#549d2abb803809fbd8f981c17e4c48708b33d6cd"
 dependencies = [
  "async-trait",
  "chrono",
  "futures-util",
  "hex",
+ "mime_guess",
  "oauth2",
  "rand 0.8.5",
  "regex",
