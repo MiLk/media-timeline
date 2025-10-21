@@ -47,6 +47,7 @@
                 <a class="media-gallery__item-thumbnail"
                    href="{{ attachment.url }}"
                    target="_blank" rel="noopener noreferrer">
+                    {% if attachment.meta and attachment.meta.original and attachment.meta.small %}
                     <img
                             src=" {{ attachment.preview_url }}"
                             srcset="{{ attachment.url }} {{ attachment.meta.original.width }}w, {{ attachment.preview_url }} {{ attachment.meta.small.width }}w"
@@ -54,6 +55,14 @@
                             loading="lazy"
                             alt="{{ attachment.description }}" title="{{ attachment.description }}"
                             lang="en" style="object-position: 50% 50%;"/>
+                    {% else %}
+                    <img
+                            src="{{ attachment.preview_url }}"
+                            loading="lazy"
+                            alt="{{ attachment.description }}" title="{{ attachment.description }}"
+                            lang="en" style="object-position: 50% 50%;"/>
+                    >
+                    {% endif %}
                 </a>
                 <div class="media-gallery__item__badges">
                     <button class="media-gallery__alt__label">ALT</button>

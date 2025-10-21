@@ -8,9 +8,10 @@ use actix_web::{
     CustomizeResponder, Either, HttpRequest, HttpResponse, Responder, error, get, web,
 };
 use chrono::Utc;
-use log::debug;
+use log::{debug, error};
 use megalodon::entities::Status;
 use serde::Serialize;
+use std::error::Error;
 use std::str::FromStr;
 use std::time::SystemTime;
 use tera::{Context, Tera};
@@ -52,7 +53,13 @@ async fn build_timeline(
                 None => customized_res,
             }
         })
-        .map_err(error::ErrorInternalServerError)
+        .map_err(|e| {
+            error!("Error rendering timeline template: {}", e);
+            e.source().iter().for_each(|source| {
+                error!("Caused by: {}", source);
+            });
+            error::ErrorInternalServerError(e)
+        })
 }
 
 #[get("")]
