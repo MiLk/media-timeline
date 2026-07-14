@@ -148,29 +148,34 @@ impl StatusService for StatusServiceImpl {
     }
 
     async fn persist_statuses(&self, statuses: &Vec<Status>) -> Result<(), StatusServiceError> {
-        async fn write_status(
-            status: Status,
-            index_repository: Arc<dyn StatusIndexRepository>,
-        ) -> () {
-            let dir = directory_for_status(&status.id.as_str());
-            create_dir_all(&dir)
-                .await
-                .expect(format!("failed to create dir {}", dir).as_str());
-            let filepath = format!("{}/{}.json", dir, &status.id);
-            let mut file = File::create(&filepath)
-                .await
-                .expect(format!("failed to create file {}", &filepath).as_str());
-            file.write_all(
-                serde_json::to_string(&status)
-                    .expect(format!("failed to serialize status {}", &status.id).as_str())
-                    .as_bytes(),
-            )
-            .await
-            .expect(format!("failed to write to file {}", &filepath).as_str());
-
-            index_repository
-                .insert_statuses(vec![&status])
-                .expect(format!("failed to insert status {}", &status.id).as_str());
+        async fn write_status(status: Status, index_repository: Arc<dyn StatusIndexRepository>) {
+            let dir = directory_for_status(status.id.as_str());
+            if let Err(e) = create_dir_all(&dir).await {
+                warn!("Failed to create dir {dir} for status {}: {e}", status.id);
+                return;
+            }
+            let filepath = format!("{}/{}.json", dir, status.id);
+            let json = match serde_json::to_string(&status) {
+                Ok(json) => json,
+                Err(e) => {
+                    warn!("Failed to serialize status {}: {e}", status.id);
+                    return;
+                }
+            };
+            let mut file = match File::create(&filepath).await {
+                Ok(file) => file,
+                Err(e) => {
+                    warn!("Failed to create file {filepath}: {e}");
+                    return;
+                }
+            };
+            if let Err(e) = file.write_all(json.as_bytes()).await {
+                warn!("Failed to write file {filepath}: {e}");
+                return;
+            }
+            if let Err(e) = index_repository.insert_statuses(vec![&status]) {
+                warn!("Failed to index status {}: {e}", status.id);
+            }
         }
 
         let mut tasks = Vec::with_capacity(statuses.len());
