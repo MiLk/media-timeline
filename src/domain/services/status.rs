@@ -12,8 +12,6 @@ use tokio::task::JoinError;
 pub enum StatusServiceError {
     #[error("unable to read the file")]
     FileError(#[from] io::Error),
-    #[error("unable to parse the content")]
-    ParsingError(#[from] serde_json::Error),
 
     #[error("Unable to retrieve statuses from Mastodon API")]
     CantRetrieveStatuses(#[from] megalodon::error::Error),

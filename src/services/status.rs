@@ -28,6 +28,20 @@ fn directory_for_status(status_id: &str) -> String {
     format!("data/statuses/{}/{}", dir1, dir2)
 }
 
+/// Deserialize a cached status, skipping it if the on-disk JSON no longer
+/// matches the current schema. The status files are a cache of the Mastodon
+/// API; a stale entry (e.g. written before a `megalodon` schema change) must
+/// degrade to a missing post, never fail the whole timeline.
+fn parse_cached_status(id: &str, content: &str) -> Option<Status> {
+    match serde_json::from_str::<Status>(content) {
+        Ok(status) => Some(status),
+        Err(e) => {
+            warn!("Skipping unparseable cached status {id}: {e}");
+            None
+        }
+    }
+}
+
 pub struct StatusServiceImpl {
     mastodon_client: Arc<MastodonClient>,
     recent_repository: Arc<dyn RecentStatusRepository>,
@@ -55,8 +69,9 @@ impl StatusServiceImpl {
             let mut file = File::open(filepath).await?;
             let mut content = String::new();
             file.read_to_string(&mut content).await?;
-            let decoded: Status = serde_json::from_str(content.as_str())?;
-            statuses.push(decoded);
+            if let Some(status) = parse_cached_status(&id, content.as_str()) {
+                statuses.push(status);
+            }
         }
         debug!("{} statuses read from storage", statuses.len());
         Ok(statuses)
@@ -212,5 +227,27 @@ impl StatusService for StatusServiceImpl {
             .iter()
             .map(|&period| Ok((period, self.index_repository.popular_tags(&period, &limit)?)))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_cached_status_accepts_current_schema() {
+        let content = include_str!("testdata/status_current.json");
+        assert!(parse_cached_status("1", content).is_some());
+    }
+
+    #[test]
+    fn parse_cached_status_skips_pre_migration_schema() {
+        let content = include_str!("testdata/status_pre_migration.json");
+        assert!(parse_cached_status("1", content).is_none());
+    }
+
+    #[test]
+    fn parse_cached_status_skips_invalid_json() {
+        assert!(parse_cached_status("1", "{ not valid json").is_none());
     }
 }
