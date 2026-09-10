@@ -5,6 +5,7 @@ use actix_files::Files;
 use actix_web::App;
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
+use actix_web::http::header;
 use actix_web::middleware::{Condition, Logger};
 use actix_web::{Error, middleware};
 use std::sync::Arc;
@@ -30,6 +31,11 @@ pub fn create_app(
             container.settings.actix.enable_compression,
             middleware::Compress::default(),
         ))
+        // Without an explicit directive, intermediaries invent their own TTL:
+        // Cloudflare served a two-month-old index.js alongside fresh HTML. Handlers
+        // that set their own Cache-Control (the timeline) keep it; everything else,
+        // static assets included, must revalidate against the ETag actix-files sends.
+        .wrap(middleware::DefaultHeaders::new().add((header::CACHE_CONTROL, "no-cache")))
         .wrap(middleware::NormalizePath::trim())
         .configure(hashtags_config)
         .configure(timeline_config)
