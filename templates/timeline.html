@@ -47,21 +47,23 @@
                 <a class="media-gallery__item-thumbnail"
                    href="{{ attachment.url }}"
                    target="_blank" rel="noopener noreferrer">
-                    {% if attachment.meta and attachment.meta.original and attachment.meta.small %}
+                    {% set meta = attachment.meta %}
+                    {% if meta and meta.small and meta.original and meta.original.width <= 1200 %}
                     <img
-                            src=" {{ attachment.preview_url }}"
-                            srcset="{{ attachment.url }} {{ attachment.meta.original.width }}w, {{ attachment.preview_url }} {{ attachment.meta.small.width }}w"
+                            src="{{ attachment.preview_url }}"
+                            srcset="{{ attachment.preview_url }} {{ meta.small.width }}w, {{ attachment.url }} {{ meta.original.width }}w"
                             sizes="{% if status.media_attachments | length > 1 %}283px{% else %}566px{% endif %}"
                             loading="lazy"
+                            decoding="async"
                             alt="{{ attachment.description }}" title="{{ attachment.description }}"
                             lang="en" style="object-position: 50% 50%;"/>
                     {% else %}
                     <img
                             src="{{ attachment.preview_url }}"
                             loading="lazy"
+                            decoding="async"
                             alt="{{ attachment.description }}" title="{{ attachment.description }}"
                             lang="en" style="object-position: 50% 50%;"/>
-                    >
                     {% endif %}
                 </a>
                 <div class="media-gallery__item__badges">
