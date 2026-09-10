@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
           rel="stylesheet">
     <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=at,attribution,code,globe,lock,lock_open,recommend,refresh,star_shine,taunt"/>
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=at,attribution,chevron_left,chevron_right,close,code,globe,lock,lock_open,recommend,refresh,star_shine,taunt"/>
     <link rel="stylesheet" href="https://unpkg.com/normalize.css@8.0.1/normalize.css"/>
     <link rel="stylesheet" href="/style.css"/>
     <link rel="stylesheet" href="/index.css"/>
@@ -99,6 +99,33 @@
     </div>
 
 </div>
+
+<div id="alt-panel" hidden>
+    <div class="alt-panel__header">
+        <h2>Alt text</h2>
+        <button type="button" class="alt-panel__close" aria-label="Close alt text">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
+    <p class="alt-panel__text"></p>
+</div>
+
+<dialog id="viewer" aria-label="Image viewer">
+    <button type="button" class="viewer__close" aria-label="Close viewer">
+        <span class="material-symbols-outlined">close</span>
+    </button>
+    <button type="button" class="viewer__nav viewer__nav--prev" aria-label="Previous image">
+        <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+    <button type="button" class="viewer__nav viewer__nav--next" aria-label="Next image">
+        <span class="material-symbols-outlined">chevron_right</span>
+    </button>
+    <figure class="viewer__figure">
+        <img class="viewer__image" alt=""/>
+        <figcaption class="viewer__caption"></figcaption>
+    </figure>
+</dialog>
+
 <script src="https://unpkg.com/htmx.org@2.0.4"
         integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
         crossorigin="anonymous"></script>

@@ -47,4 +47,16 @@
             padding: 1em 0;
         }
     }
+
+    .viewer__figure {
+        padding: 48px 8px;
+    }
+
+    .viewer__nav--prev {
+        left: 0;
+    }
+
+    .viewer__nav--next {
+        right: 0;
+    }
 }

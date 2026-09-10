@@ -55,20 +55,22 @@
                             sizes="{% if status.media_attachments | length > 1 %}283px{% else %}566px{% endif %}"
                             loading="lazy"
                             decoding="async"
-                            alt="{{ attachment.description }}" title="{{ attachment.description }}"
+                            alt="{{ attachment.description }}"
                             lang="en" style="object-position: 50% 50%;"/>
                     {% else %}
                     <img
                             src="{{ attachment.preview_url }}"
                             loading="lazy"
                             decoding="async"
-                            alt="{{ attachment.description }}" title="{{ attachment.description }}"
+                            alt="{{ attachment.description }}"
                             lang="en" style="object-position: 50% 50%;"/>
                     {% endif %}
                 </a>
+                {% if attachment.description %}
                 <div class="media-gallery__item__badges">
-                    <button class="media-gallery__alt__label">ALT</button>
+                    <button type="button" class="media-gallery__alt__label" aria-expanded="false">ALT</button>
                 </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
